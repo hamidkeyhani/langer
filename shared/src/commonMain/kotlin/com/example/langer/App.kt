@@ -1,6 +1,7 @@
 package com.example.langer
 
 import androidx.compose.runtime.*
+import androidx.compose.material3.*
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.langer.model.Deck
 import com.example.langer.model.Flashcard
@@ -10,11 +11,13 @@ import com.example.langer.ui.*
 
 @Composable
 @Preview
-fun App() {
+fun App(onExit: () -> Unit = {}) {
     val storage = remember { LangerStorage(getPlatformStorage()) }
     val decksState = remember { mutableStateListOf<Deck>() }
     val cardsState = remember { mutableStateListOf<Flashcard>() }
     var isLoading by remember { mutableStateOf(true) }
+    var showExitDialog by remember { mutableStateOf(false) }
+
 
     // Seed and Load initial data
     LaunchedEffect(Unit) {
@@ -80,8 +83,39 @@ fun App() {
     }
 
     LangerTheme {
+        if (showExitDialog) {
+            AlertDialog(
+                onDismissRequest = { showExitDialog = false },
+                title = { Text("Exit Langer") },
+                text = { Text("Are you sure you want to exit Langer?") },
+                confirmButton = {
+                    Button(
+                        onClick = {
+                            showExitDialog = false
+                            onExit()
+                        }
+                    ) {
+                        Text("Exit")
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showExitDialog = false }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+        }
+
         if (!isLoading) {
             val navigator = rememberNavigator(Screen.DeckList)
+
+            RegisterBackHandler(enabled = true) {
+                if (navigator.canGoBack) {
+                    navigator.pop()
+                } else {
+                    showExitDialog = true
+                }
+            }
 
             AnimatedNavigation(navigator) { screen ->
                 when (screen) {

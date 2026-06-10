@@ -34,6 +34,7 @@ fun DeckListScreen(
     onDeleteDeck: (String) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
+    var deckToDelete by remember { mutableStateOf<Deck?>(null) }
     var deckName by remember { mutableStateOf("") }
     var deckDesc by remember { mutableStateOf("") }
 
@@ -177,8 +178,9 @@ fun DeckListScreen(
                             onStudy = { onStudyDeck(deck.id) },
                             onManage = { onManageDeck(deck.id) },
                             onBulkImport = { onBulkImport(deck.id) },
-                            onDelete = { onDeleteDeck(deck.id) }
+                            onDelete = { deckToDelete = deck }
                         )
+
                     }
                 }
             }
@@ -226,7 +228,32 @@ fun DeckListScreen(
             }
         )
     }
+
+    deckToDelete?.let { deck ->
+        AlertDialog(
+            onDismissRequest = { deckToDelete = null },
+            title = { Text("Delete Deck") },
+            text = { Text("Are you sure you want to delete the deck '${deck.name}'? This will permanently delete all of its cards.") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        onDeleteDeck(deck.id)
+                        deckToDelete = null
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text("Delete")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { deckToDelete = null }) {
+                    Text("Cancel")
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 fun StatItem(title: String, value: String, color: Color) {
