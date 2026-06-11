@@ -10,6 +10,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -215,31 +216,35 @@ fun StudyScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(40.dp))
                     
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        OutlinedButton(
-                            onClick = onBack,
-                            shape = RoundedCornerShape(50.dp)
-                        ) {
-                            Text("Back to Home")
-                        }
-                        
-                        if (allCards.any { it.deckId == deckId }) {
-                            Button(
-                                onClick = {
-                                    val practiceCards = allCards.filter { it.deckId == deckId }
-                                    sessionQueue.clear()
-                                    sessionQueue.addAll(practiceCards.shuffled())
-                                    studiedCount = 0
-                                    againCount = 0
-                                    goodCount = 0
-                                },
-                                shape = RoundedCornerShape(50.dp)
-                            ) {
-                                Text("Practice Again")
-                            }
-                        }
+                    Button(
+                        onClick = onBack,
+                        shape = RoundedCornerShape(50.dp),
+                        modifier = Modifier
+                            .fillMaxWidth(0.7f)
+                            .height(54.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary
+                        ),
+                        elevation = ButtonDefaults.buttonElevation(
+                            defaultElevation = 2.dp,
+                            pressedElevation = 6.dp
+                        )
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Home,
+                            contentDescription = "Home",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            "Back to Home",
+                            style = MaterialTheme.typography.titleMedium.copy(fontSize = 16.sp),
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
                     }
                 }
             } else {
