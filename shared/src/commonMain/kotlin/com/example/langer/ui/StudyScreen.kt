@@ -163,7 +163,7 @@ fun StudyScreen(
                         modifier = Modifier.size(150.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        AnimatedUnicornCharacter(modifier = Modifier.fillMaxSize())
+                        VictoryUnicornCharacter(modifier = Modifier.fillMaxSize())
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))

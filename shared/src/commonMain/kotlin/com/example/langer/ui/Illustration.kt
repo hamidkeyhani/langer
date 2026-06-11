@@ -401,3 +401,372 @@ fun AnimatedUnicornCharacter(
         }
     }
 }
+
+@Composable
+fun VictoryUnicornCharacter(
+    modifier: Modifier = Modifier
+) {
+    val infiniteTransition = rememberInfiniteTransition()
+
+    // High-Energy Bounce vertical offset (loops every 3.0 seconds)
+    val bobbingOffset by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 0f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 3000
+                0f at 0
+                0f at 200 with FastOutSlowInEasing
+                -36f at 1200 with FastOutSlowInEasing // High victory jump
+                0f at 2200 with FastOutSlowInEasing // Landing
+                6f at 2500 with FastOutSlowInEasing // Squash rebound
+                0f at 2800 with FastOutSlowInEasing
+                0f at 3000
+            },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Squash & Stretch X-scaling factor
+    val scaleX by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 3000
+                1f at 0
+                1f at 200 with FastOutSlowInEasing
+                1.15f at 700 with FastOutSlowInEasing // Pre-jump squash
+                0.85f at 1200 with FastOutSlowInEasing // Mid-air stretch
+                1.12f at 2300 with FastOutSlowInEasing // Landing squash
+                1.02f at 2600 with FastOutSlowInEasing
+                1f at 3000
+            },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Squash & Stretch Y-scaling factor
+    val scaleY by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 3000
+                1f at 0
+                1f at 200 with FastOutSlowInEasing
+                0.82f at 700 with FastOutSlowInEasing // Pre-jump squash
+                1.22f at 1200 with FastOutSlowInEasing // Mid-air stretch
+                0.85f at 2300 with FastOutSlowInEasing // Landing squash
+                0.98f at 2600 with FastOutSlowInEasing
+                1f at 3000
+            },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Horn glowing aura radius (flares up bright gold during jump)
+    val hornGlowRadius by infiniteTransition.animateFloat(
+        initialValue = 10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = keyframes {
+                durationMillis = 3000
+                10f at 0
+                10f at 300 with FastOutSlowInEasing
+                48f at 1200 with FastOutSlowInEasing // Glowing peak
+                10f at 2200 with FastOutSlowInEasing
+                10f at 3000
+            },
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Double Star rotation (twice as fast, rotating 720 degrees)
+    val starRotation by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 720f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        )
+    )
+
+    // Floating offsets for extra stars using reverse bobbing
+    val float1 by infiniteTransition.animateFloat(
+        initialValue = -10f,
+        targetValue = 10f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1600, easing = FastOutLinearInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    val float2 by infiniteTransition.animateFloat(
+        initialValue = 8f,
+        targetValue = -12f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 2200, easing = LinearOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Canvas(modifier = modifier) {
+        val w = size.width
+        val h = size.height
+
+        // Colors
+        val white = Color.White
+        val black = Color.Black
+        val hornColor = Color(0xFFFDE047) // Gold
+        val snoutColor = Color(0xFFFFE4E6) // Soft pink
+        val cheekColor = Color(0xFFFDA4AF).copy(alpha = 0.8f)
+        val manePurple = Color(0xFFC084FC)
+        val maneFuchsia = Color(0xFFF472B6)
+        val maneCyan = Color(0xFF22D3EE)
+        val hornGlowColor = Color(0xFFFEF08A).copy(alpha = 0.6f) // Glowing yellow
+
+        // Base pivot for Squash & Stretch
+        val pivot = Offset(w * 0.5f, h * 0.76f)
+
+        scale(scaleX, scaleY, pivot) {
+            translate(top = bobbingOffset) {
+                // 1. Draw Mane
+                // Lock 1 (Left-back)
+                drawOval(
+                    color = manePurple,
+                    topLeft = Offset(w * 0.20f, h * 0.35f),
+                    size = Size(w * 0.16f, h * 0.25f)
+                )
+                drawOval(
+                    color = black,
+                    topLeft = Offset(w * 0.20f, h * 0.35f),
+                    size = Size(w * 0.16f, h * 0.25f),
+                    style = Stroke(width = 5f)
+                )
+
+                // Lock 2 (Left-bottom)
+                drawOval(
+                    color = maneFuchsia,
+                    topLeft = Offset(w * 0.24f, h * 0.52f),
+                    size = Size(w * 0.14f, h * 0.20f)
+                )
+                drawOval(
+                    color = black,
+                    topLeft = Offset(w * 0.24f, h * 0.52f),
+                    size = Size(w * 0.14f, h * 0.20f),
+                    style = Stroke(width = 5f)
+                )
+
+                // Lock 3 (Right-back)
+                drawOval(
+                    color = maneCyan,
+                    topLeft = Offset(w * 0.62f, h * 0.42f),
+                    size = Size(w * 0.15f, h * 0.22f)
+                )
+                drawOval(
+                    color = black,
+                    topLeft = Offset(w * 0.62f, h * 0.42f),
+                    size = Size(w * 0.15f, h * 0.22f),
+                    style = Stroke(width = 5f)
+                )
+
+                // 2. Draw Ears
+                val leftEarPath = Path().apply {
+                    moveTo(w * 0.36f, h * 0.36f)
+                    lineTo(w * 0.28f, h * 0.16f)
+                    lineTo(w * 0.44f, h * 0.32f)
+                    close()
+                }
+                drawPath(path = leftEarPath, color = white)
+                drawPath(path = leftEarPath, color = black, style = Stroke(width = 5f))
+
+                val leftEarInnerPath = Path().apply {
+                    moveTo(w * 0.35f, h * 0.33f)
+                    lineTo(w * 0.30f, h * 0.20f)
+                    lineTo(w * 0.40f, h * 0.30f)
+                    close()
+                }
+                drawPath(path = leftEarInnerPath, color = snoutColor)
+
+                val rightEarPath = Path().apply {
+                    moveTo(w * 0.64f, h * 0.36f)
+                    lineTo(w * 0.72f, h * 0.16f)
+                    lineTo(w * 0.56f, h * 0.32f)
+                    close()
+                }
+                drawPath(path = rightEarPath, color = white)
+                drawPath(path = rightEarPath, color = black, style = Stroke(width = 5f))
+
+                val rightEarInnerPath = Path().apply {
+                    moveTo(w * 0.65f, h * 0.33f)
+                    lineTo(w * 0.70f, h * 0.20f)
+                    lineTo(w * 0.60f, h * 0.30f)
+                    close()
+                }
+                drawPath(path = rightEarInnerPath, color = snoutColor)
+
+                // 3. Draw Main Head
+                val headSize = Size(w * 0.44f, h * 0.44f)
+                val headOffset = Offset(w * 0.28f, h * 0.30f)
+                drawOval(
+                    color = white,
+                    topLeft = headOffset,
+                    size = headSize
+                )
+                drawOval(
+                    color = black,
+                    topLeft = headOffset,
+                    size = headSize,
+                    style = Stroke(width = 5f)
+                )
+
+                // 4. Draw Snout
+                val snoutSize = Size(w * 0.34f, h * 0.20f)
+                val snoutOffset = Offset(w * 0.33f, h * 0.52f)
+                drawOval(
+                    color = snoutColor,
+                    topLeft = snoutOffset,
+                    size = snoutSize
+                )
+                drawOval(
+                    color = black,
+                    topLeft = snoutOffset,
+                    size = snoutSize,
+                    style = Stroke(width = 5f)
+                )
+
+                // Nostrils
+                drawCircle(
+                    color = black,
+                    radius = 3.5f,
+                    center = Offset(w * 0.45f, h * 0.58f)
+                )
+                drawCircle(
+                    color = black,
+                    radius = 3.5f,
+                    center = Offset(w * 0.55f, h * 0.58f)
+                )
+
+                // Cute Smile Mouth (wider and happier smile!)
+                drawArc(
+                    color = black,
+                    startAngle = 0f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.45f, h * 0.60f),
+                    size = Size(w * 0.10f, h * 0.07f),
+                    style = Stroke(width = 4.5f, cap = StrokeCap.Round)
+                )
+
+                // 5. Draw Victory Happy Squint Eyes (^ ^)
+                // Left Eye Squint
+                drawArc(
+                    color = black,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.35f, h * 0.40f),
+                    size = Size(w * 0.09f, h * 0.08f),
+                    style = Stroke(width = 5.5f, cap = StrokeCap.Round)
+                )
+                // Right Eye Squint
+                drawArc(
+                    color = black,
+                    startAngle = 180f,
+                    sweepAngle = 180f,
+                    useCenter = false,
+                    topLeft = Offset(w * 0.56f, h * 0.40f),
+                    size = Size(w * 0.09f, h * 0.08f),
+                    style = Stroke(width = 5.5f, cap = StrokeCap.Round)
+                )
+
+                // 6. Rosy Cheeks (extra bright for excitement)
+                drawOval(
+                    color = cheekColor,
+                    topLeft = Offset(w * 0.29f, h * 0.48f),
+                    size = Size(w * 0.08f, h * 0.045f)
+                )
+                drawOval(
+                    color = cheekColor,
+                    topLeft = Offset(w * 0.63f, h * 0.48f),
+                    size = Size(w * 0.08f, h * 0.045f)
+                )
+
+                // 7. Magic Horn Glowing Aura
+                drawCircle(
+                    color = hornGlowColor,
+                    radius = hornGlowRadius,
+                    center = Offset(w * 0.50f, h * 0.15f)
+                )
+
+                // 8. Draw Magic Horn
+                val hornPath = Path().apply {
+                    moveTo(w * 0.46f, h * 0.31f)
+                    lineTo(w * 0.50f, h * 0.08f)
+                    lineTo(w * 0.54f, h * 0.31f)
+                    close()
+                }
+                drawPath(path = hornPath, color = hornColor)
+                drawPath(path = hornPath, color = black, style = Stroke(width = 5f))
+
+                // Horn ribs
+                drawLine(
+                    color = black,
+                    start = Offset(w * 0.47f, h * 0.25f),
+                    end = Offset(w * 0.53f, h * 0.25f),
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+                drawLine(
+                    color = black,
+                    start = Offset(w * 0.48f, h * 0.18f),
+                    end = Offset(w * 0.52f, h * 0.18f),
+                    strokeWidth = 4f,
+                    cap = StrokeCap.Round
+                )
+
+                // 9. Floating Star 1 (Magic Gold Star, bobbing and rotating!)
+                val star1Center = Offset(w * 0.36f, h * 0.15f + float1)
+                drawStar(this, star1Center, w * 0.026f, w * 0.011f, starRotation, Color(0xFFFDE047), black)
+
+                // 10. Floating Star 2 (Victory Pink Sparkle on the right)
+                val star2Center = Offset(w * 0.65f, h * 0.22f + float2)
+                drawStar(this, star2Center, w * 0.022f, w * 0.009f, -starRotation * 0.8f, Color(0xFFF472B6), black)
+
+                // 11. Floating Star 3 (Victory Cyan Sparkle on the left-bottom)
+                val star3Center = Offset(w * 0.22f, h * 0.48f - float1 * 0.7f)
+                drawStar(this, star3Center, w * 0.020f, w * 0.008f, starRotation * 1.2f, Color(0xFF22D3EE), black)
+            }
+        }
+    }
+}
+
+// Helper to draw a parameterized star on Canvas
+private fun drawStar(
+    drawScope: androidx.compose.ui.graphics.drawscope.DrawScope,
+    center: Offset,
+    outerRadius: Float,
+    innerRadius: Float,
+    rotationDegrees: Float,
+    fillColor: Color,
+    borderColor: Color
+) {
+    val path = Path().apply {
+        val degToRad = (PI / 180.0).toFloat()
+        for (i in 0 until 5) {
+            val angleRad = (i * 72 - 90 + rotationDegrees) * degToRad
+            val x1 = center.x + outerRadius * cos(angleRad)
+            val y1 = center.y + outerRadius * sin(angleRad)
+            if (i == 0) moveTo(x1, y1) else lineTo(x1, y1)
+
+            val angleRad2 = (i * 72 + 36 - 90 + rotationDegrees) * degToRad
+            val x2 = center.x + innerRadius * cos(angleRad2)
+            val y2 = center.y + innerRadius * sin(angleRad2)
+            lineTo(x2, y2)
+        }
+        close()
+    }
+    drawScope.drawPath(path = path, color = fillColor)
+    drawScope.drawPath(path = path, color = borderColor, style = Stroke(width = 3.5f))
+}
