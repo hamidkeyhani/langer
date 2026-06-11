@@ -24,7 +24,15 @@ data class Flashcard(
     val repetitions: Int = 0,
     val intervalDays: Int = 0,
     val nextReviewTimeMillis: Long = currentTimeMillis(),
-    val createdAtMillis: Long = currentTimeMillis()
+    val createdAtMillis: Long = currentTimeMillis(),
+    val firstStudiedTimeMillis: Long = 0L,
+    val lastStudiedTimeMillis: Long = 0L
+)
+
+@Serializable
+data class SeedWord(
+    val word: String,
+    val meaning: String
 )
 
 @Serializable

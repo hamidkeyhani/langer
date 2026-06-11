@@ -9,47 +9,55 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 
-// Premium Dark Theme Palette
-val DarkBackground = Color(0xFF0F1115) // Deep luxury charcoal
-val DarkSurface = Color(0xFF181B22)    // Slightly lighter card slate
-val DarkSurfaceVariant = Color(0xFF222631)
-val DarkPrimary = Color(0xFFEC4899)    // Modern vibrant rose-pink
-val DarkSecondary = Color(0xFF06B6D4)  // Electric cyan accent
-val DarkTertiary = Color(0xFF8B5CF6)   // Mystic violet
-val DarkOnBackground = Color(0xFFF3F4F6)
-val DarkOnSurface = Color(0xFFE5E7EB)
-val DarkOutline = Color(0xFF374151)
+// BrainBob-inspired color palette
+val BrainBobIndigo = Color(0xFF5D53C1)      // Signature Indigo
+val BrainBobLightBg = Color(0xFFF5F6FA)     // Warm off-white
+val BrainBobLightSurface = Color(0xFFFFFFFF)
+val BrainBobLightSurfaceVariant = Color(0xFFECEEF5)
 
-// Rating Button Colors (SRS)
+val BrainBobDarkBg = Color(0xFF12131A)      // Deep dark navy-purple
+val BrainBobDarkSurface = Color(0xFF1C1D2A) // Dark slate
+val BrainBobDarkSurfaceVariant = Color(0xFF252739)
+val BrainBobDarkPrimary = Color(0xFF7B73E6) // Soft vibrant indigo for dark mode
+
+// Action colors matching BrainBob list styling
+object ActionColors {
+    val Red = Color(0xFFEF4444)
+    val Blue = Color(0xFF3B82F6)
+    val Orange = Color(0xFFF97316)
+    val Green = Color(0xFF10B981)
+}
+
+// Spaced Repetition rating colors (adapted to BrainBob theme)
 object SrsColors {
-    val Again = Color(0xFFEF4444)  // Vibrant Red
-    val Hard = Color(0xFFF59E0B)   // Warm Amber/Orange
-    val Good = Color(0xFF10B981)   // Emerald Green
-    val Easy = Color(0xFF3B82F6)   // Sky Blue
+    val Again = Color(0xFFEF4444)  // Red
+    val Hard = Color(0xFF64748B)   // Slate Gray
+    val Good = Color(0xFF10B981)   // Green
+    val Easy = Color(0xFF3B82F6)   // Blue
 }
 
 private val DarkColorScheme = darkColorScheme(
-    primary = DarkPrimary,
-    secondary = DarkSecondary,
-    tertiary = DarkTertiary,
-    background = DarkBackground,
-    surface = DarkSurface,
-    surfaceVariant = DarkSurfaceVariant,
-    onBackground = DarkOnBackground,
-    onSurface = DarkOnSurface,
-    outline = DarkOutline
+    primary = BrainBobDarkPrimary,
+    secondary = Color(0xFF38BDF8), // Light blue
+    tertiary = Color(0xFFF472B6),  // Pink
+    background = BrainBobDarkBg,
+    surface = BrainBobDarkSurface,
+    surfaceVariant = BrainBobDarkSurfaceVariant,
+    onBackground = Color(0xFFF1F5F9),
+    onSurface = Color(0xFFE2E8F0),
+    outline = Color(0xFF334155)
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Color(0xFFD946EF), // Fuchsia
-    secondary = Color(0xFF0EA5E9), // Sky Blue
-    tertiary = Color(0xFF6366F1), // Indigo
-    background = Color(0xFFFAF9F6), // Warm white
-    surface = Color(0xFFFFFFFF),
-    surfaceVariant = Color(0xFFF1F5F9),
+    primary = BrainBobIndigo,
+    secondary = Color(0xFF0284C7), // Blue
+    tertiary = Color(0xFFDB2777),  // Fuchsia
+    background = BrainBobLightBg,
+    surface = BrainBobLightSurface,
+    surfaceVariant = BrainBobLightSurfaceVariant,
     onBackground = Color(0xFF0F172A),
     onSurface = Color(0xFF1E293B),
-    outline = Color(0xFFE2E8F0)
+    outline = Color(0xFFCBD5E1)
 )
 
 val LangerTypography = Typography(
@@ -62,13 +70,13 @@ val LangerTypography = Typography(
     ),
     headlineMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.SemiBold,
-        fontSize = 24.sp,
-        lineHeight = 32.sp
+        fontWeight = FontWeight.Bold,
+        fontSize = 26.sp,
+        lineHeight = 34.sp
     ),
     titleLarge = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         fontSize = 20.sp,
         lineHeight = 26.sp
     ),
@@ -80,13 +88,13 @@ val LangerTypography = Typography(
     ),
     bodyMedium = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Normal,
+        fontWeight = FontWeight.Medium,
         fontSize = 14.sp,
         lineHeight = 20.sp
     ),
     labelLarge = TextStyle(
         fontFamily = FontFamily.Default,
-        fontWeight = FontWeight.Medium,
+        fontWeight = FontWeight.Bold,
         fontSize = 14.sp,
         lineHeight = 20.sp
     )
@@ -94,7 +102,7 @@ val LangerTypography = Typography(
 
 @Composable
 fun LangerTheme(
-    darkTheme: Boolean = isSystemInDarkTheme() || true, // Default to dark theme for premium aesthetics
+    darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme

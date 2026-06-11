@@ -3,8 +3,11 @@ package com.example.langer
 import androidx.compose.runtime.*
 import androidx.compose.material3.*
 import androidx.compose.ui.tooling.preview.Preview
+import langer.shared.generated.resources.Res
+import kotlinx.serialization.json.Json
 import com.example.langer.model.Deck
 import com.example.langer.model.Flashcard
+import com.example.langer.model.SeedWord
 import com.example.langer.storage.LangerStorage
 import com.example.langer.storage.getPlatformStorage
 import com.example.langer.ui.*
@@ -15,59 +18,90 @@ fun App(onExit: () -> Unit = {}) {
     val storage = remember { LangerStorage(getPlatformStorage()) }
     val decksState = remember { mutableStateListOf<Deck>() }
     val cardsState = remember { mutableStateListOf<Flashcard>() }
+    
+    var isDarkTheme by remember { mutableStateOf(true) }
+    var dailyLimit by remember { mutableStateOf(20) }
     var isLoading by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
 
-
     // Seed and Load initial data
     LaunchedEffect(Unit) {
+        // Load settings preference
+        isDarkTheme = storage.getThemePreference()
+        dailyLimit = storage.getDailyNewCardsLimit()
+
         var loadedDecks = storage.getDecks()
         var loadedCards = storage.getCards()
 
         if (loadedDecks.isEmpty()) {
             val defaultDeck = Deck(
-                name = "Essential English Words",
-                description = "Standard vocabulary for daily practice"
+                name = "4000 Essential English Words",
+                description = "Complete essential academic vocabulary list"
             )
             loadedDecks = listOf(defaultDeck)
             
-            loadedCards = listOf(
-                Flashcard(
-                    deckId = defaultDeck.id,
-                    word = "agree",
-                    phonetic = "ə'griː",
-                    meaning = "To have the same opinion or belief as another person.",
-                    example = "The students agree they have too much homework."
-                ),
-                Flashcard(
-                    deckId = defaultDeck.id,
-                    word = "abundant",
-                    phonetic = "ə'bʌndənt",
-                    meaning = "Existing or available in large quantities; overflowing.",
-                    example = "Coal is an abundant resource in this region."
-                ),
-                Flashcard(
-                    deckId = defaultDeck.id,
-                    word = "benevolent",
-                    phonetic = "bə'nevələnt",
-                    meaning = "Well meaning and kindly; charitable.",
-                    example = "A benevolent gentleman left a large sum of money to the hospital."
-                ),
-                Flashcard(
-                    deckId = defaultDeck.id,
-                    word = "candid",
-                    phonetic = "'kændɪd",
-                    meaning = "Truthful and straightforward; frank.",
-                    example = "His responses were remarkably candid and open."
-                ),
-                Flashcard(
-                    deckId = defaultDeck.id,
-                    word = "diligent",
-                    phonetic = "'dɪlɪdʒənt",
-                    meaning = "Having or showing care and conscientiousness in one's work or duties.",
-                    example = "The diligent student was rewarded with top marks."
+            val jsonText = try {
+                Res.readBytes("files/essential_words.json").decodeToString()
+            } catch (e: Exception) {
+                ""
+            }
+            val seedWords = try {
+                if (jsonText.isNotEmpty()) {
+                    Json.decodeFromString<List<SeedWord>>(jsonText)
+                } else {
+                    emptyList()
+                }
+            } catch (e: Exception) {
+                emptyList()
+            }
+
+            loadedCards = if (seedWords.isNotEmpty()) {
+                seedWords.map { seed ->
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = seed.word,
+                        meaning = seed.meaning
+                    )
+                }
+            } else {
+                listOf(
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = "agree",
+                        phonetic = "ə'griː",
+                        meaning = "To have the same opinion or belief as another person.",
+                        example = "The students agree they have too much homework."
+                    ),
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = "abundant",
+                        phonetic = "ə'bʌndənt",
+                        meaning = "Existing or available in large quantities; overflowing.",
+                        example = "Coal is an abundant resource in this region."
+                    ),
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = "benevolent",
+                        phonetic = "bə'nevələnt",
+                        meaning = "Well meaning and kindly; charitable.",
+                        example = "A benevolent gentleman left a large sum of money to the hospital."
+                    ),
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = "candid",
+                        phonetic = "'kændɪd",
+                        meaning = "Truthful and straightforward; frank.",
+                        example = "His responses were remarkably candid and open."
+                    ),
+                    Flashcard(
+                        deckId = defaultDeck.id,
+                        word = "diligent",
+                        phonetic = "'dɪlɪdʒənt",
+                        meaning = "Having or showing care and conscientiousness in one's work or duties.",
+                        example = "The diligent student was rewarded with top marks."
+                    )
                 )
-            )
+            }
             
             storage.saveDecks(loadedDecks)
             storage.saveCards(loadedCards)
@@ -82,7 +116,7 @@ fun App(onExit: () -> Unit = {}) {
         isLoading = false
     }
 
-    LangerTheme {
+    LangerTheme(darkTheme = isDarkTheme) {
         if (showExitDialog) {
             AlertDialog(
                 onDismissRequest = { showExitDialog = false },
@@ -123,6 +157,16 @@ fun App(onExit: () -> Unit = {}) {
                         DeckListScreen(
                             decks = decksState,
                             cards = cardsState,
+                            isDarkTheme = isDarkTheme,
+                            onToggleTheme = {
+                                isDarkTheme = !isDarkTheme
+                                storage.saveThemePreference(isDarkTheme)
+                            },
+                            dailyLimit = dailyLimit,
+                            onUpdateDailyLimit = { limit ->
+                                dailyLimit = limit
+                                storage.saveDailyNewCardsLimit(limit)
+                            },
                             onStudyDeck = { navigator.navigateTo(Screen.Study(it)) },
                             onManageDeck = { navigator.navigateTo(Screen.CardManager(it)) },
                             onBulkImport = { navigator.navigateTo(Screen.BulkImport(it)) },
@@ -145,6 +189,7 @@ fun App(onExit: () -> Unit = {}) {
                             deckId = screen.deckId,
                             deckName = deck?.name ?: "Study",
                             allCards = cardsState,
+                            dailyLimit = dailyLimit,
                             onSaveCard = { card ->
                                 val idx = cardsState.indexOfFirst { it.id == card.id }
                                 if (idx >= 0) {

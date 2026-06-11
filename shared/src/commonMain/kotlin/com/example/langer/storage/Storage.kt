@@ -45,4 +45,20 @@ class LangerStorage(private val storage: KeyValueStorage) {
         val str = json.encodeToString(ListSerializer(Flashcard.serializer()), cards)
         storage.putString("langer_cards", str)
     }
+
+    fun getThemePreference(): Boolean {
+        return storage.getString("langer_dark_theme")?.toBoolean() ?: true
+    }
+
+    fun saveThemePreference(isDark: Boolean) {
+        storage.putString("langer_dark_theme", isDark.toString())
+    }
+
+    fun getDailyNewCardsLimit(): Int {
+        return storage.getString("langer_daily_new_cards_limit")?.toIntOrNull() ?: 20
+    }
+
+    fun saveDailyNewCardsLimit(limit: Int) {
+        storage.putString("langer_daily_new_cards_limit", limit.toString())
+    }
 }

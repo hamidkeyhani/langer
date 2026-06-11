@@ -5,6 +5,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
@@ -14,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -38,23 +40,50 @@ fun StudyScreen(
     deckId: String,
     deckName: String,
     allCards: List<Flashcard>,
+    dailyLimit: Int,
     onSaveCard: (Flashcard) -> Unit,
     onBack: () -> Unit
 ) {
     val now = currentTimeMillis()
     
-    // Filter cards belonging to this deck that are new or due
-    val initialStudyCards = remember(deckId, allCards) {
-        allCards.filter { it.deckId == deckId && (it.repetitions == 0 || it.nextReviewTimeMillis <= now) }
+    // Helper to check if two timestamps fall on the same calendar day (UTC-based simple division)
+    fun isSameDay(t1: Long, t2: Long): Boolean {
+        val dayMillis = 24L * 60 * 60 * 1000
+        return t1 / dayMillis == t2 / dayMillis
+    }
+
+    // Filter cards belonging to this deck
+    val deckCards = remember(deckId, allCards) {
+        allCards.filter { it.deckId == deckId }
+    }
+
+    // Count how many new cards were introduced today (first study timestamp matches today)
+    val newCardsStudiedToday = remember(deckCards, now) {
+        deckCards.count { it.firstStudiedTimeMillis > 0L && isSameDay(it.firstStudiedTimeMillis, now) }
+    }
+
+    val newCardsAllowance = (dailyLimit - newCardsStudiedToday).coerceAtLeast(0)
+
+    val dueReviews = remember(deckCards, now) {
+        deckCards.filter { it.repetitions > 0 && it.nextReviewTimeMillis <= now }
+    }
+    
+    val newCardsAvailable = remember(deckCards) {
+        deckCards.filter { it.repetitions == 0 }
     }
 
     // Keep track of the active queue for this study session
     val sessionQueue = remember { mutableStateListOf<Flashcard>() }
     var sessionInitialized by remember { mutableStateOf(false) }
 
+    val initialStudyCards = remember(dueReviews, newCardsAvailable, newCardsAllowance) {
+        val limitedNew = newCardsAvailable.shuffled().take(newCardsAllowance)
+        (dueReviews + limitedNew).shuffled()
+    }
+
     if (!sessionInitialized) {
         sessionQueue.clear()
-        sessionQueue.addAll(initialStudyCards.shuffled())
+        sessionQueue.addAll(initialStudyCards)
         sessionInitialized = true
     }
 
@@ -81,89 +110,95 @@ fun StudyScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp)
+                .padding(horizontal = 20.dp, vertical = 10.dp)
         ) {
             if (sessionQueue.isEmpty()) {
-                // Celebration Screen
+                // Celebration Screen (BrainBob style)
                 Column(
                     modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.Center,
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Icon(
-                        Icons.Default.CheckCircle,
-                        contentDescription = "Success",
-                        modifier = Modifier.size(100.dp),
-                        tint = SrsColors.Good
-                    )
+                    Box(
+                        modifier = Modifier.size(150.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        HeadphonesCloudCharacter(modifier = Modifier.fillMaxSize())
+                    }
+                    
                     Spacer(modifier = Modifier.height(24.dp))
+                    
                     Text(
                         "Congratulations!",
                         style = MaterialTheme.typography.headlineLarge,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                        color = MaterialTheme.colorScheme.primary,
+                        textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "You have finished this deck for now.",
+                        "You finished this deck for now.",
                         style = MaterialTheme.typography.titleLarge,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Daily limit reached. All due cards reviewed.",
+                        "All due cards reviewed. Come back tomorrow!",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         textAlign = TextAlign.Center
                     )
                     
-                    Spacer(modifier = Modifier.height(32.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
                     
                     // Session Stats Card
                     Card(
                         modifier = Modifier.fillMaxWidth(0.9f),
-                        shape = RoundedCornerShape(16.dp),
-                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                        shape = RoundedCornerShape(20.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
                     ) {
                         Row(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Studied", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                                Text("Studied", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
                                 Text("$studiedCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Again (Forgot)", style = MaterialTheme.typography.labelLarge, color = SrsColors.Again)
+                                Text("Again (Forgot)", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Again)
                                 Text("$againCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Again)
                             }
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Good/Easy", style = MaterialTheme.typography.labelLarge, color = SrsColors.Good)
+                                Text("Good / Easy", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Good)
                                 Text("$goodCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Good)
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(40.dp))
+                    Spacer(modifier = Modifier.height(32.dp))
                     
-                    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                        OutlinedButton(onClick = onBack) {
-                            Text("Back to Decks")
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        OutlinedButton(
+                            onClick = onBack,
+                            shape = RoundedCornerShape(50.dp)
+                        ) {
+                            Text("Back to Home")
                         }
-                        // Custom study: reset some cards for studying again
+                        
                         if (allCards.any { it.deckId == deckId }) {
                             Button(
                                 onClick = {
-                                    // Custom Study: Reload all cards in the deck for practice (temporary session)
                                     val practiceCards = allCards.filter { it.deckId == deckId }
                                     sessionQueue.clear()
                                     sessionQueue.addAll(practiceCards.shuffled())
                                     studiedCount = 0
                                     againCount = 0
                                     goodCount = 0
-                                }
+                                },
+                                shape = RoundedCornerShape(50.dp)
                             ) {
-                                Text("Practice Deck Again")
+                                Text("Practice Again")
                             }
                         }
                     }
@@ -175,7 +210,7 @@ fun StudyScreen(
                 // 3D Card Rotation State
                 val rotation by animateFloatAsState(
                     targetValue = if (isFlipped) 180f else 0f,
-                    animationSpec = tween(durationMillis = 500)
+                    animationSpec = tween(durationMillis = 400)
                 )
 
                 Column(
@@ -188,20 +223,20 @@ fun StudyScreen(
                     val progress = 1f - (remaining.toFloat() / totalCards.toFloat()).coerceIn(0f, 1f)
 
                     Row(
-                        modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         LinearProgressIndicator(
-                            progress = progress,
+                            progress = { progress },
                             modifier = Modifier.weight(1f).height(8.dp).graphicsLayer(shape = RoundedCornerShape(4.dp), clip = true),
                             color = MaterialTheme.colorScheme.primary,
                             trackColor = MaterialTheme.colorScheme.surfaceVariant
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
-                            "$remaining cards left",
-                            style = MaterialTheme.typography.labelLarge,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            "$remaining left",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )
                     }
 
@@ -216,17 +251,20 @@ fun StudyScreen(
                             }
                             .background(Color.Transparent)
                     ) {
+                        val wordColor = if (MaterialTheme.colorScheme.background.red > 0.5f) Color(0xFFD946EF) else Color(0xFFFB7185) // Fuchsia / coral pink
+                        val cyanHighlight = Color(0xFF0ea5e9) // Vibrant cyan
+
                         if (rotation <= 90f) {
                             // FRONT SIDE
                             Card(
                                 modifier = Modifier.fillMaxSize(),
-                                shape = RoundedCornerShape(24.dp),
+                                shape = RoundedCornerShape(32.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = CardDefaults.outlinedCardBorder().copy(
                                     brush = Brush.linearGradient(
                                         colors = listOf(
-                                            MaterialTheme.colorScheme.outline,
-                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.2f),
+                                            MaterialTheme.colorScheme.outline.copy(alpha = 0.1f)
                                         )
                                     )
                                 )
@@ -236,20 +274,40 @@ fun StudyScreen(
                                     verticalArrangement = Arrangement.Center,
                                     horizontalAlignment = Alignment.CenterHorizontally
                                 ) {
+                                    // Top banner tag
+                                    Box(
+                                        modifier = Modifier
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                            .padding(horizontal = 12.dp, vertical = 4.dp)
+                                    ) {
+                                        Text(
+                                            "VOCABULARY",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            letterSpacing = 1.sp
+                                        )
+                                    }
+
+                                    Spacer(modifier = Modifier.height(36.dp))
+
+                                    // Word
                                     Text(
                                         currentCard.word,
-                                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 38.sp),
+                                        style = MaterialTheme.typography.headlineLarge.copy(fontSize = 40.sp),
                                         fontWeight = FontWeight.Bold,
-                                        color = MaterialTheme.colorScheme.primary,
+                                        color = wordColor,
                                         textAlign = TextAlign.Center
                                     )
                                     
+                                    // Phonetic
                                     if (currentCard.phonetic.isNotBlank()) {
-                                        Spacer(modifier = Modifier.height(12.dp))
+                                        Spacer(modifier = Modifier.height(8.dp))
                                         Text(
                                             currentCard.phonetic,
-                                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 24.sp),
-                                            color = MaterialTheme.colorScheme.secondary,
+                                            style = MaterialTheme.typography.headlineMedium.copy(fontSize = 22.sp),
+                                            color = wordColor.copy(alpha = 0.7f),
                                             fontStyle = FontStyle.Italic,
                                             textAlign = TextAlign.Center
                                         )
@@ -263,13 +321,13 @@ fun StudyScreen(
                                         colors = IconButtonDefaults.iconButtonColors(
                                             containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                                         ),
-                                        modifier = Modifier.size(56.dp)
+                                        modifier = Modifier.size(64.dp)
                                     ) {
                                         Icon(
                                             Icons.Default.PlayArrow,
                                             contentDescription = "Speak Word",
                                             tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(32.dp)
+                                            modifier = Modifier.size(36.dp)
                                         )
                                     }
 
@@ -283,20 +341,18 @@ fun StudyScreen(
                                 }
                             }
                         } else {
-                            // BACK SIDE (Rotated back by 180 degrees so it renders right side up)
+                            // BACK SIDE (Rotated 180 degrees)
                             Card(
                                 modifier = Modifier
                                     .fillMaxSize()
-                                    .graphicsLayer {
-                                        rotationY = 180f
-                                    },
-                                shape = RoundedCornerShape(24.dp),
+                                    .graphicsLayer { rotationY = 180f },
+                                shape = RoundedCornerShape(32.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = CardDefaults.outlinedCardBorder().copy(
                                     brush = Brush.linearGradient(
                                         colors = listOf(
-                                            MaterialTheme.colorScheme.secondary,
-                                            MaterialTheme.colorScheme.primary
+                                            MaterialTheme.colorScheme.primary.copy(alpha = 0.3f),
+                                            MaterialTheme.colorScheme.secondary.copy(alpha = 0.3f)
                                         )
                                     )
                                 )
@@ -304,7 +360,7 @@ fun StudyScreen(
                                 Column(
                                     modifier = Modifier.fillMaxSize().padding(24.dp)
                                 ) {
-                                    // Card Word Header (smaller than front)
+                                    // Header details
                                     Row(
                                         modifier = Modifier.fillMaxWidth(),
                                         verticalAlignment = Alignment.CenterVertically,
@@ -313,90 +369,64 @@ fun StudyScreen(
                                         Column {
                                             Text(
                                                 currentCard.word,
-                                                style = MaterialTheme.typography.headlineMedium,
+                                                style = MaterialTheme.typography.headlineMedium.copy(fontSize = 28.sp),
                                                 fontWeight = FontWeight.Bold,
-                                                color = MaterialTheme.colorScheme.primary
+                                                color = wordColor
                                             )
                                             if (currentCard.phonetic.isNotBlank()) {
                                                 Text(
                                                     currentCard.phonetic,
                                                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
-                                                    color = MaterialTheme.colorScheme.secondary,
+                                                    color = wordColor.copy(alpha = 0.7f),
                                                     fontStyle = FontStyle.Italic
                                                 )
                                             }
                                         }
-                                        IconButton(
-                                            onClick = { TtsPlayer.speak(currentCard.word) },
-                                            colors = IconButtonDefaults.iconButtonColors(
-                                                containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
-                                            ),
-                                            modifier = Modifier.size(44.dp)
-                                        ) {
-                                            Icon(Icons.Default.PlayArrow, "Speak Word", tint = MaterialTheme.colorScheme.primary)
-                                        }
                                     }
 
-                                    Divider(modifier = Modifier.padding(vertical = 16.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                                    HorizontalDivider(modifier = Modifier.padding(vertical = 12.dp), color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
 
-                                    // Scrollable content area
+                                    // Content Scroll Area
                                     Column(
                                         modifier = Modifier.weight(1f),
                                         verticalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
-                                        // Meaning
+                                        // Meaning (Cyan text)
                                         Column {
                                             Text(
                                                 "Meaning",
-                                                style = MaterialTheme.typography.labelLarge,
-                                                color = MaterialTheme.colorScheme.secondary,
-                                                fontWeight = FontWeight.Bold
+                                                style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                                letterSpacing = 0.5.sp
                                             )
                                             Spacer(modifier = Modifier.height(4.dp))
                                             Text(
-                                                currentCard.meaning,
-                                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 18.sp),
-                                                color = MaterialTheme.colorScheme.onSurface
+                                                "Meaning: ${currentCard.meaning}",
+                                                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, fontWeight = FontWeight.SemiBold),
+                                                color = cyanHighlight
                                             )
                                         }
 
-                                        // Example
+                                        // Example (white/black text, target word in cyan)
                                         if (currentCard.example.isNotBlank()) {
                                             Column {
-                                                Row(
-                                                    modifier = Modifier.fillMaxWidth(),
-                                                    verticalAlignment = Alignment.CenterVertically,
-                                                    horizontalArrangement = Arrangement.SpaceBetween
-                                                ) {
-                                                    Text(
-                                                        "Example Sentence",
-                                                        style = MaterialTheme.typography.labelLarge,
-                                                        color = MaterialTheme.colorScheme.secondary,
-                                                        fontWeight = FontWeight.Bold
-                                                    )
-                                                    IconButton(
-                                                        onClick = { TtsPlayer.speak(currentCard.example) },
-                                                        modifier = Modifier.size(32.dp)
-                                                    ) {
-                                                        Icon(
-                                                            Icons.Default.PlayArrow,
-                                                            "Speak Example",
-                                                            tint = MaterialTheme.colorScheme.secondary
-                                                        )
-                                                    }
-                                                }
+                                                Text(
+                                                    "Example",
+                                                    style = MaterialTheme.typography.bodyMedium.copy(fontSize = 12.sp, fontWeight = FontWeight.Bold),
+                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f),
+                                                    letterSpacing = 0.5.sp
+                                                )
                                                 Spacer(modifier = Modifier.height(4.dp))
                                                 
-                                                // Make target word bold in the example sentence
-                                                val primaryColor = MaterialTheme.colorScheme.primary
-                                                val annotatedExample = remember(currentCard.example, currentCard.word, primaryColor) {
+                                                val annotatedExample = remember(currentCard.example, currentCard.word) {
                                                     buildAnnotatedString {
+                                                        append("→ Example: ")
                                                         val text = currentCard.example
                                                         val word = currentCard.word
                                                         val index = text.indexOf(word, ignoreCase = true)
                                                         if (index >= 0) {
                                                             append(text.substring(0, index))
-                                                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = primaryColor)) {
+                                                            withStyle(style = SpanStyle(fontWeight = FontWeight.Bold, color = cyanHighlight)) {
                                                                 append(text.substring(index, index + word.length))
                                                             }
                                                             append(text.substring(index + word.length))
@@ -408,7 +438,37 @@ fun StudyScreen(
                                                 Text(
                                                     annotatedExample,
                                                     style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp, fontStyle = FontStyle.Italic),
-                                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f)
+                                                    color = MaterialTheme.colorScheme.onSurface
+                                                )
+                                            }
+                                        }
+                                        
+                                        Spacer(modifier = Modifier.weight(1f))
+
+                                        // Three horizontal play buttons: Word, Sentence, Both
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(16.dp, Alignment.CenterHorizontally)
+                                        ) {
+                                            // Word TTS
+                                            AudioPlayButton(
+                                                label = "Word",
+                                                onClick = { TtsPlayer.speak(currentCard.word) }
+                                            )
+                                            // Sentence TTS
+                                            if (currentCard.example.isNotBlank()) {
+                                                AudioPlayButton(
+                                                    label = "Sentence",
+                                                    onClick = { TtsPlayer.speak(currentCard.example) }
+                                                )
+                                                // Sequenced TTS
+                                                AudioPlayButton(
+                                                    label = "All",
+                                                    onClick = {
+                                                        TtsPlayer.speak(currentCard.word)
+                                                        // simple delay loop or sequential call trigger
+                                                        TtsPlayer.speak(". ${currentCard.example}")
+                                                    }
                                                 )
                                             }
                                         }
@@ -417,7 +477,7 @@ fun StudyScreen(
                             }
                         }
 
-                        // Invisible clickable overlay to trigger flip (only when not flipped)
+                        // Overlay flip trigger (only when showing front)
                         if (!isFlipped) {
                             Box(
                                 modifier = Modifier
@@ -427,19 +487,20 @@ fun StudyScreen(
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(24.dp))
+                    Spacer(modifier = Modifier.height(20.dp))
 
-                    // Buttons
+                    // Action buttons
                     if (!isFlipped) {
                         Button(
                             onClick = { isFlipped = true },
                             modifier = Modifier.fillMaxWidth().height(56.dp),
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF475569)) // Slate grey banner
                         ) {
-                            Text("Show Answer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                            Text("Show Answer", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = Color.White)
                         }
                     } else {
-                        // Rating buttons
+                        // Spaced Repetition Response Bar
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -454,17 +515,19 @@ fun StudyScreen(
                                 onClick = {
                                     studiedCount++
                                     againCount++
-                                    // Update SRS state but keep card in queue
-                                    val updatedCard = SrsEngine.review(currentCard, CardRating.AGAIN)
+                                    val reviewedCard = SrsEngine.review(currentCard, CardRating.AGAIN, now)
+                                    val updatedCard = reviewedCard.copy(
+                                        firstStudiedTimeMillis = if (currentCard.firstStudiedTimeMillis == 0L) now else currentCard.firstStudiedTimeMillis,
+                                        lastStudiedTimeMillis = now
+                                    )
                                     onSaveCard(updatedCard)
-                                    // Move card to the end of the session queue
                                     sessionQueue.removeFirst()
                                     sessionQueue.add(updatedCard)
                                 }
                             )
 
                             // Hard
-                            val nextHard = SrsEngine.review(currentCard, CardRating.HARD)
+                            val nextHard = SrsEngine.review(currentCard, CardRating.HARD, now)
                             val intervalHard = formatInterval(nextHard.intervalDays)
                             RatingButton(
                                 title = "Hard",
@@ -473,14 +536,18 @@ fun StudyScreen(
                                 modifier = Modifier.weight(1f),
                                 onClick = {
                                     studiedCount++
-                                    val updatedCard = SrsEngine.review(currentCard, CardRating.HARD)
+                                    val reviewedCard = SrsEngine.review(currentCard, CardRating.HARD, now)
+                                    val updatedCard = reviewedCard.copy(
+                                        firstStudiedTimeMillis = if (currentCard.firstStudiedTimeMillis == 0L) now else currentCard.firstStudiedTimeMillis,
+                                        lastStudiedTimeMillis = now
+                                    )
                                     onSaveCard(updatedCard)
                                     sessionQueue.removeFirst()
                                 }
                             )
 
                             // Good
-                            val nextGood = SrsEngine.review(currentCard, CardRating.GOOD)
+                            val nextGood = SrsEngine.review(currentCard, CardRating.GOOD, now)
                             val intervalGood = formatInterval(nextGood.intervalDays)
                             RatingButton(
                                 title = "Good",
@@ -490,14 +557,18 @@ fun StudyScreen(
                                 onClick = {
                                     studiedCount++
                                     goodCount++
-                                    val updatedCard = SrsEngine.review(currentCard, CardRating.GOOD)
+                                    val reviewedCard = SrsEngine.review(currentCard, CardRating.GOOD, now)
+                                    val updatedCard = reviewedCard.copy(
+                                        firstStudiedTimeMillis = if (currentCard.firstStudiedTimeMillis == 0L) now else currentCard.firstStudiedTimeMillis,
+                                        lastStudiedTimeMillis = now
+                                    )
                                     onSaveCard(updatedCard)
                                     sessionQueue.removeFirst()
                                 }
                             )
 
                             // Easy
-                            val nextEasy = SrsEngine.review(currentCard, CardRating.EASY)
+                            val nextEasy = SrsEngine.review(currentCard, CardRating.EASY, now)
                             val intervalEasy = formatInterval(nextEasy.intervalDays)
                             RatingButton(
                                 title = "Easy",
@@ -507,7 +578,11 @@ fun StudyScreen(
                                 onClick = {
                                     studiedCount++
                                     goodCount++
-                                    val updatedCard = SrsEngine.review(currentCard, CardRating.EASY)
+                                    val reviewedCard = SrsEngine.review(currentCard, CardRating.EASY, now)
+                                    val updatedCard = reviewedCard.copy(
+                                        firstStudiedTimeMillis = if (currentCard.firstStudiedTimeMillis == 0L) now else currentCard.firstStudiedTimeMillis,
+                                        lastStudiedTimeMillis = now
+                                    )
                                     onSaveCard(updatedCard)
                                     sessionQueue.removeFirst()
                                 }
@@ -521,6 +596,38 @@ fun StudyScreen(
 }
 
 @Composable
+fun AudioPlayButton(
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier.clickable { onClick() }
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.PlayArrow,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            label,
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
 fun RatingButton(
     title: String,
     interval: String,
@@ -530,33 +637,29 @@ fun RatingButton(
 ) {
     Button(
         onClick = onClick,
+        modifier = modifier.height(56.dp),
+        shape = RoundedCornerShape(16.dp),
         colors = ButtonDefaults.buttonColors(containerColor = color),
-        shape = RoundedCornerShape(12.dp),
-        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 8.dp),
-        modifier = modifier.height(56.dp)
+        contentPadding = PaddingValues(0.dp)
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                interval,
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 11.sp),
-                color = Color.White.copy(alpha = 0.8f)
-            )
-            Spacer(modifier = Modifier.height(2.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.labelLarge.copy(fontSize = 14.sp),
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            Text(title, fontWeight = FontWeight.Bold, fontSize = 12.sp, color = Color.White)
+            Text(interval, fontSize = 10.sp, color = Color.White.copy(alpha = 0.8f))
         }
     }
 }
 
 fun formatInterval(days: Int): String {
     return when {
-        days == 0 -> "<1m"
-        days < 30 -> "${days}d"
-        days < 365 -> "${(days / 30f).roundToInt()}m"
-        else -> "${(days / 365f).roundToInt()}y"
+        days <= 0 -> "<1d"
+        days < 7 -> "${days}d"
+        days < 30 -> {
+            val weeks = days / 7
+            if (weeks == 0) "1w" else "${weeks}w"
+        }
+        else -> {
+            val months = days / 30
+            if (months == 0) "1m" else "${months}m"
+        }
     }
 }
