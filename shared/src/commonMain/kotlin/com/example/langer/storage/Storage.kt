@@ -4,6 +4,7 @@ import com.example.langer.model.Flashcard
 import com.example.langer.model.Deck
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.builtins.ListSerializer
+import kotlinx.serialization.serializer
 
 interface KeyValueStorage {
     fun getString(key: String): String?
@@ -60,5 +61,19 @@ class LangerStorage(private val storage: KeyValueStorage) {
 
     fun saveDailyNewCardsLimit(limit: Int) {
         storage.putString("langer_daily_new_cards_limit", limit.toString())
+    }
+
+    fun getCategories(): List<String> {
+        val str = storage.getString("langer_categories") ?: return listOf("Brainstorm", "Books", "Video", "Grammar")
+        return try {
+            json.decodeFromString(ListSerializer(serializer<String>()), str)
+        } catch (e: Exception) {
+            listOf("Brainstorm", "Books", "Video", "Grammar")
+        }
+    }
+
+    fun saveCategories(categories: List<String>) {
+        val str = json.encodeToString(ListSerializer(serializer<String>()), categories)
+        storage.putString("langer_categories", str)
     }
 }

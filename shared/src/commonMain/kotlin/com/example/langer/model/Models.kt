@@ -41,7 +41,8 @@ data class SeedWord(
 data class Deck(
     val id: String = generateId(),
     val name: String,
-    val description: String = ""
+    val description: String = "",
+    val category: String = "Brainstorm"
 )
 
 object SrsEngine {

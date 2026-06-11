@@ -29,6 +29,8 @@ import com.example.langer.util.currentTimeMillis
 fun DeckListScreen(
     decks: List<Deck>,
     cards: List<Flashcard>,
+    categories: List<String>,
+    onAddCategory: (String) -> Unit,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
     dailyLimit: Int,
@@ -36,29 +38,36 @@ fun DeckListScreen(
     onStudyDeck: (String) -> Unit,
     onManageDeck: (String) -> Unit,
     onBulkImport: (String) -> Unit,
-    onCreateDeck: (String, String) -> Unit,
+    onCreateDeck: (String, String, String) -> Unit,
     onDeleteDeck: (String) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showSwitchDeckDialog by remember { mutableStateOf(false) }
+    var showAddCategoryDialog by remember { mutableStateOf(false) }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
     var deckName by remember { mutableStateOf("") }
     var deckDesc by remember { mutableStateOf("") }
+    var newCategoryName by remember { mutableStateOf("") }
 
     val now = currentTimeMillis()
 
-    // Manage active deck state (default to the first deck)
-    var activeDeckId by remember(decks) {
-        mutableStateOf(decks.firstOrNull()?.id ?: "")
-    }
-    val activeDeck = remember(decks, activeDeckId) {
-        decks.find { it.id == activeDeckId } ?: decks.firstOrNull()
+    // Category pills state
+    var selectedCategory by remember { mutableStateOf("Brainstorm") }
+
+    // Filter decks belonging to the selected category reactively using derivedStateOf
+    val filteredDecks by remember(decks, selectedCategory) {
+        derivedStateOf { decks.filter { it.category == selectedCategory } }
     }
 
-    // Category pills state
-    val categories = listOf("Brainstorm", "Books", "Video", "Grammar")
-    var selectedCategory by remember { mutableStateOf("Brainstorm") }
+    // Manage active deck state reactively
+    var activeDeckId by remember { mutableStateOf("") }
+    val activeDeck by remember(decks, activeDeckId, selectedCategory) {
+        derivedStateOf {
+            filteredDecks.find { it.id == activeDeckId } ?: filteredDecks.firstOrNull()
+        }
+    }
+    val currentActiveDeck = activeDeck
 
     Scaffold(
         topBar = {
@@ -111,7 +120,8 @@ fun DeckListScreen(
             // Horizontal Category Pills
             LazyRow(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 items(categories) { category ->
                     val isSelected = category == selectedCategory
@@ -132,13 +142,31 @@ fun DeckListScreen(
                         )
                     }
                 }
+                
+                item {
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                            .clickable { showAddCategoryDialog = true }
+                            .size(38.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = "Add Category",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(20.dp)
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
             // Main Featured Card (Active Deck)
-            if (activeDeck != null) {
-                val activeCards = cards.filter { it.deckId == activeDeck.id }
+            if (currentActiveDeck != null) {
+                val activeCards = cards.filter { it.deckId == currentActiveDeck.id }
                 val activeNew = activeCards.count { it.repetitions == 0 }
                 val activeReview = activeCards.count { it.repetitions > 0 && it.nextReviewTimeMillis <= now }
 
@@ -160,7 +188,7 @@ fun DeckListScreen(
                         ) {
                             Column {
                                 Text(
-                                    activeDeck.name,
+                                    currentActiveDeck.name,
                                     style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
                                     color = Color.White,
                                     fontWeight = FontWeight.Bold,
@@ -179,7 +207,7 @@ fun DeckListScreen(
                             
                             // Start Study Button (White Pill)
                             Button(
-                                onClick = { onStudyDeck(activeDeck.id) },
+                                onClick = { onStudyDeck(currentActiveDeck.id) },
                                 colors = ButtonDefaults.buttonColors(containerColor = Color.White),
                                 shape = RoundedCornerShape(50.dp),
                                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
@@ -241,7 +269,7 @@ fun DeckListScreen(
                 modifier = Modifier.padding(bottom = 12.dp)
             )
 
-            if (activeDeck != null) {
+            if (currentActiveDeck != null) {
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.weight(1f)
@@ -252,7 +280,7 @@ fun DeckListScreen(
                             subtitle = "Search, edit or delete vocabulary",
                             iconColor = ActionColors.Blue,
                             icon = Icons.Default.List,
-                            onClick = { onManageDeck(activeDeck.id) }
+                            onClick = { onManageDeck(currentActiveDeck.id) }
                         )
                     }
                     item {
@@ -261,7 +289,7 @@ fun DeckListScreen(
                             subtitle = "Import lists of words instantly",
                             iconColor = ActionColors.Orange,
                             icon = Icons.Default.Share, // Upload arrow equivalent
-                            onClick = { onBulkImport(activeDeck.id) }
+                            onClick = { onBulkImport(currentActiveDeck.id) }
                         )
                     }
                     item {
@@ -270,13 +298,13 @@ fun DeckListScreen(
                             subtitle = "Add a custom vocabulary card",
                             iconColor = ActionColors.Red,
                             icon = Icons.Default.Add,
-                            onClick = { onManageDeck(activeDeck.id) } // goes to card manager where they tap FAB
+                            onClick = { onManageDeck(currentActiveDeck.id) } // goes to card manager where they tap FAB
                         )
                     }
                     item {
                         RecommendedActionRow(
                             title = "Switch Deck",
-                            subtitle = "Study or manage other decks (${decks.size} total)",
+                            subtitle = "Study or manage other decks in this category (${filteredDecks.size} total)",
                             iconColor = ActionColors.Green,
                             icon = Icons.Default.Refresh,
                             onClick = { showSwitchDeckDialog = true }
@@ -299,7 +327,7 @@ fun DeckListScreen(
                     modifier = Modifier.fillMaxWidth().heightIn(max = 300.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    items(decks) { deck ->
+                    items(filteredDecks) { deck ->
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -350,42 +378,171 @@ fun DeckListScreen(
 
     // Create Deck dialog
     if (showCreateDialog) {
+        var selectedCategoryForNewDeck by remember(showCreateDialog) {
+            mutableStateOf(selectedCategory)
+        }
+        
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Create Custom Deck") },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Folder,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Text(
+                        text = "Create Custom Deck",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
             text = {
-                Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    TextField(
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = "Create a custom deck to organize and practice your own list of vocabulary words.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    
+                    OutlinedTextField(
                         value = deckName,
                         onValueChange = { deckName = it },
                         label = { Text("Deck Name") },
+                        placeholder = { Text("e.g. My IELTS Vocabulary") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Edit,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    TextField(
+                    
+                    OutlinedTextField(
                         value = deckDesc,
                         onValueChange = { deckDesc = it },
                         label = { Text("Description (Optional)") },
+                        placeholder = { Text("e.g. Difficult verbs and adjectives") },
+                        leadingIcon = {
+                            Icon(
+                                imageVector = Icons.Default.Info,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.7f)
+                            )
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
                         modifier = Modifier.fillMaxWidth()
                     )
+
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "Category",
+                        style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
+                    )
+                    
+                    FlowRow(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        categories.forEach { category ->
+                            val isSelected = category == selectedCategoryForNewDeck
+                            val pillBg = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant
+                            val pillText = if (isSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                            
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .background(pillBg)
+                                    .clickable { selectedCategoryForNewDeck = category }
+                                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = category,
+                                    style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Bold),
+                                    color = pillText
+                                )
+                            }
+                        }
+                    }
                 }
             },
             confirmButton = {
                 Button(
                     onClick = {
                         if (deckName.isNotBlank()) {
-                            onCreateDeck(deckName, deckDesc)
+                            onCreateDeck(deckName, deckDesc, selectedCategoryForNewDeck)
                             deckName = ""
                             deckDesc = ""
                             showCreateDialog = false
                         }
-                    }
+                    },
+                    enabled = deckName.isNotBlank(),
+                    shape = RoundedCornerShape(50.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        disabledContainerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.3f)
+                    )
                 ) {
-                    Text("Create")
+                    Text(
+                        text = "Create",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Cancel")
+                TextButton(
+                    onClick = {
+                        deckName = ""
+                        deckDesc = ""
+                        showCreateDialog = false
+                    },
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
             }
         )
@@ -402,7 +559,7 @@ fun DeckListScreen(
                     onClick = {
                         onDeleteDeck(deck.id)
                         if (activeDeckId == deck.id) {
-                            activeDeckId = decks.firstOrNull { it.id != deck.id }?.id ?: ""
+                            activeDeckId = filteredDecks.firstOrNull { it.id != deck.id }?.id ?: ""
                         }
                         deckToDelete = null
                         showSwitchDeckDialog = false
@@ -493,6 +650,108 @@ fun DeckListScreen(
                     shape = RoundedCornerShape(50.dp)
                 ) {
                     Text("Done")
+                }
+            }
+        )
+    }
+
+    // Add Category dialog
+    if (showAddCategoryDialog) {
+        AlertDialog(
+            onDismissRequest = { 
+                showAddCategoryDialog = false
+                newCategoryName = ""
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Add,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Text(
+                        text = "Add Category",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        text = "Enter a name for the new category to organize your decks.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                    )
+                    OutlinedTextField(
+                        value = newCategoryName,
+                        onValueChange = { newCategoryName = it },
+                        label = { Text("Category Name") },
+                        placeholder = { Text("e.g. TOEFL") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = MaterialTheme.colorScheme.primary,
+                            unfocusedBorderColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f),
+                            focusedLabelColor = MaterialTheme.colorScheme.primary,
+                            unfocusedLabelColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        ),
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val trimmed = newCategoryName.trim()
+                        if (trimmed.isNotBlank()) {
+                            onAddCategory(trimmed)
+                            selectedCategory = trimmed // Switch to it automatically
+                            newCategoryName = ""
+                            showAddCategoryDialog = false
+                        }
+                    },
+                    enabled = newCategoryName.isNotBlank(),
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        text = "Add",
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        newCategoryName = ""
+                        showAddCategoryDialog = false
+                    },
+                    shape = RoundedCornerShape(50.dp)
+                ) {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Medium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
                 }
             }
         )

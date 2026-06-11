@@ -24,6 +24,7 @@ fun App(onExit: () -> Unit = {}) {
     val storage = remember { LangerStorage(getPlatformStorage()) }
     val decksState = remember { mutableStateListOf<Deck>() }
     val cardsState = remember { mutableStateListOf<Flashcard>() }
+    val categoriesState = remember { mutableStateListOf<String>() }
     
     var isDarkTheme by remember { mutableStateOf(true) }
     var dailyLimit by remember { mutableStateOf(20) }
@@ -35,6 +36,7 @@ fun App(onExit: () -> Unit = {}) {
         // Load settings preference
         isDarkTheme = storage.getThemePreference()
         dailyLimit = storage.getDailyNewCardsLimit()
+        categoriesState.addAll(storage.getCategories())
 
         // 1. Read and Parse JSON with ignoreUnknownKeys = true to avoid strict deserialization errors
         val jsonText = try {
@@ -64,7 +66,7 @@ fun App(onExit: () -> Unit = {}) {
 
         if (shouldReSeed) {
             val defaultDeck = Deck(
-                name = "4000 Essential English Words",
+                name = "Essential English Words",
                 description = "Complete essential academic vocabulary list"
             )
             loadedDecks = listOf(defaultDeck)
@@ -173,6 +175,13 @@ fun App(onExit: () -> Unit = {}) {
                         DeckListScreen(
                             decks = decksState,
                             cards = cardsState,
+                            categories = categoriesState,
+                            onAddCategory = { newCategory ->
+                                if (!categoriesState.contains(newCategory)) {
+                                    categoriesState.add(newCategory)
+                                    storage.saveCategories(categoriesState.toList())
+                                }
+                            },
                             isDarkTheme = isDarkTheme,
                             onToggleTheme = {
                                 isDarkTheme = !isDarkTheme
@@ -186,8 +195,8 @@ fun App(onExit: () -> Unit = {}) {
                             onStudyDeck = { navigator.navigateTo(Screen.Study(it)) },
                             onManageDeck = { navigator.navigateTo(Screen.CardManager(it)) },
                             onBulkImport = { navigator.navigateTo(Screen.BulkImport(it)) },
-                            onCreateDeck = { name, desc ->
-                                val newDeck = Deck(name = name, description = desc)
+                            onCreateDeck = { name, desc, category ->
+                                val newDeck = Deck(name = name, description = desc, category = category)
                                 decksState.add(newDeck)
                                 storage.saveDecks(decksState.toList())
                             },
