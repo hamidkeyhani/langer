@@ -32,7 +32,9 @@ data class Flashcard(
 @Serializable
 data class SeedWord(
     val word: String,
-    val meaning: String
+    val phonetic: String = "",
+    val meaning: String,
+    val example: String = ""
 )
 
 @Serializable

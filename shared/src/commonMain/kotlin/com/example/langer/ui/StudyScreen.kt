@@ -32,6 +32,9 @@ import com.example.langer.model.Flashcard
 import com.example.langer.model.SrsEngine
 import com.example.langer.tts.TtsPlayer
 import com.example.langer.util.currentTimeMillis
+import kotlinx.datetime.Instant
+import kotlinx.datetime.TimeZone
+import kotlinx.datetime.toLocalDateTime
 import kotlin.math.roundToInt
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,10 +49,14 @@ fun StudyScreen(
 ) {
     val now = currentTimeMillis()
     
-    // Helper to check if two timestamps fall on the same calendar day (UTC-based simple division)
+    // Helper to check if two timestamps fall on the same calendar day in the device's local timezone
     fun isSameDay(t1: Long, t2: Long): Boolean {
-        val dayMillis = 24L * 60 * 60 * 1000
-        return t1 / dayMillis == t2 / dayMillis
+        val instant1 = Instant.fromEpochMilliseconds(t1)
+        val instant2 = Instant.fromEpochMilliseconds(t2)
+        val tz = TimeZone.currentSystemDefault()
+        val date1 = instant1.toLocalDateTime(tz).date
+        val date2 = instant2.toLocalDateTime(tz).date
+        return date1 == date2
     }
 
     // Filter cards belonging to this deck
@@ -106,6 +113,17 @@ fun StudyScreen(
     var studiedCount by remember { mutableStateOf(0) }
     var againCount by remember { mutableStateOf(0) }
     var goodCount by remember { mutableStateOf(0) }
+
+    // Cumulative calendar day stats for the completion screen (retrieved from database in local timezone)
+    val todayStudiedCount = remember(deckCards, now) {
+        deckCards.count { it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    }
+    val todayAgainCount = remember(deckCards, now) {
+        deckCards.count { it.repetitions == 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    }
+    val todayGoodCount = remember(deckCards, now) {
+        deckCards.count { it.repetitions > 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    }
 
     Scaffold(
         topBar = {
@@ -176,18 +194,18 @@ fun StudyScreen(
                             modifier = Modifier.fillMaxWidth().padding(16.dp),
                             horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Studied", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
-                                Text("$studiedCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Again (Forgot)", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Again)
-                                Text("$againCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Again)
-                            }
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text("Good / Easy", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Good)
-                                Text("$goodCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Good)
-                            }
+                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                 Text("Studied", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f))
+                                 Text("$todayStudiedCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
+                             }
+                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                 Text("Again (Forgot)", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Again)
+                                 Text("$todayAgainCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Again)
+                             }
+                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                 Text("Good / Easy", style = MaterialTheme.typography.bodyMedium, color = SrsColors.Good)
+                                 Text("$todayGoodCount", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = SrsColors.Good)
+                             }
                         }
                     }
 

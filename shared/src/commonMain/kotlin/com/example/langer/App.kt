@@ -11,6 +11,12 @@ import com.example.langer.model.SeedWord
 import com.example.langer.storage.LangerStorage
 import com.example.langer.storage.getPlatformStorage
 import com.example.langer.ui.*
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 
 @Composable
 @Preview
@@ -30,37 +36,47 @@ fun App(onExit: () -> Unit = {}) {
         isDarkTheme = storage.getThemePreference()
         dailyLimit = storage.getDailyNewCardsLimit()
 
+        // 1. Read and Parse JSON with ignoreUnknownKeys = true to avoid strict deserialization errors
+        val jsonText = try {
+            Res.readBytes("files/essential_words.json").decodeToString()
+        } catch (e: Exception) {
+            ""
+        }
+        val jsonParser = Json { ignoreUnknownKeys = true }
+        val seedWords = try {
+            if (jsonText.isNotEmpty()) {
+                jsonParser.decodeFromString<List<SeedWord>>(jsonText)
+            } else {
+                emptyList()
+            }
+        } catch (e: Exception) {
+            emptyList()
+        }
+
         var loadedDecks = storage.getDecks()
         var loadedCards = storage.getCards()
 
-        if (loadedDecks.isEmpty()) {
+        // 2. Force re-seed/synchronization if:
+        //    - Database is empty (first launch)
+        //    - Loaded cards is <= 5 (meaning it previously fell back to the 5 default cards due to JSON parsing error)
+        //    - Loaded cards size does not match seedWords size (meaning JSON was changed/updated by the user)
+        val shouldReSeed = loadedDecks.isEmpty() || loadedCards.size <= 5 || (seedWords.isNotEmpty() && loadedCards.size != seedWords.size)
+
+        if (shouldReSeed) {
             val defaultDeck = Deck(
                 name = "4000 Essential English Words",
                 description = "Complete essential academic vocabulary list"
             )
             loadedDecks = listOf(defaultDeck)
             
-            val jsonText = try {
-                Res.readBytes("files/essential_words.json").decodeToString()
-            } catch (e: Exception) {
-                ""
-            }
-            val seedWords = try {
-                if (jsonText.isNotEmpty()) {
-                    Json.decodeFromString<List<SeedWord>>(jsonText)
-                } else {
-                    emptyList()
-                }
-            } catch (e: Exception) {
-                emptyList()
-            }
-
             loadedCards = if (seedWords.isNotEmpty()) {
                 seedWords.map { seed ->
                     Flashcard(
                         deckId = defaultDeck.id,
                         word = seed.word,
-                        meaning = seed.meaning
+                        phonetic = seed.phonetic,
+                        meaning = seed.meaning,
+                        example = seed.example
                     )
                 }
             } else {
@@ -262,6 +278,50 @@ fun App(onExit: () -> Unit = {}) {
                             onBack = { navigator.pop() }
                         )
                     }
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background),
+                contentAlignment = Alignment.Center
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center
+                ) {
+                    Box(
+                        modifier = Modifier.size(150.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        AnimatedUnicornCharacter(modifier = Modifier.fillMaxSize())
+                    }
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    Text(
+                        text = "Langer",
+                        style = MaterialTheme.typography.headlineLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    
+                    Spacer(modifier = Modifier.height(8.dp))
+                    
+                    Text(
+                        text = "Preparing your word deck...",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f)
+                    )
+                    
+                    Spacer(modifier = Modifier.height(24.dp))
+                    
+                    CircularProgressIndicator(
+                        color = MaterialTheme.colorScheme.primary,
+                        strokeWidth = 4.dp,
+                        modifier = Modifier.size(36.dp)
+                    )
                 }
             }
         }
