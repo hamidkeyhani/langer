@@ -205,7 +205,7 @@ fun DeckListScreen(
                             modifier = Modifier.weight(0.42f).fillMaxHeight(),
                             contentAlignment = Alignment.Center
                         ) {
-                            HeadphonesCloudCharacter(
+                            AnimatedUnicornCharacter(
                                 modifier = Modifier.fillMaxSize().padding(4.dp)
                             )
                         }

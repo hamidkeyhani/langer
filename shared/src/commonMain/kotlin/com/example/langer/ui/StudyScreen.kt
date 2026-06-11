@@ -123,7 +123,7 @@ fun StudyScreen(
                         modifier = Modifier.size(150.dp),
                         contentAlignment = Alignment.Center
                     ) {
-                        HeadphonesCloudCharacter(modifier = Modifier.fillMaxSize())
+                        AnimatedUnicornCharacter(modifier = Modifier.fillMaxSize())
                     }
                     
                     Spacer(modifier = Modifier.height(24.dp))
@@ -257,7 +257,9 @@ fun StudyScreen(
                         if (rotation <= 90f) {
                             // FRONT SIDE
                             Card(
-                                modifier = Modifier.fillMaxSize(),
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable { isFlipped = true },
                                 shape = RoundedCornerShape(32.dp),
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = CardDefaults.outlinedCardBorder().copy(
@@ -477,14 +479,7 @@ fun StudyScreen(
                             }
                         }
 
-                        // Overlay flip trigger (only when showing front)
-                        if (!isFlipped) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .clickable { isFlipped = true }
-                            )
-                        }
+
                     }
 
                     Spacer(modifier = Modifier.height(20.dp))
