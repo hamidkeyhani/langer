@@ -59,46 +59,52 @@ fun StudyScreen(
         return date1 == date2
     }
 
-    // Filter cards belonging to this deck
-    val deckCards = remember(deckId, allCards) {
-        allCards.filter { it.deckId == deckId }
+    // Filter cards belonging to this deck (reactive derivedStateOf tracks modifications to the SnapshotStateList)
+    val deckCards by remember(deckId) {
+        derivedStateOf { allCards.filter { it.deckId == deckId } }
     }
 
     // Count how many new cards were introduced today (first study timestamp matches today)
-    val newCardsStudiedToday = remember(deckCards, now) {
-        deckCards.count { it.firstStudiedTimeMillis > 0L && isSameDay(it.firstStudiedTimeMillis, now) }
+    val newCardsStudiedToday by remember(now) {
+        derivedStateOf { deckCards.count { it.firstStudiedTimeMillis > 0L && isSameDay(it.firstStudiedTimeMillis, now) } }
     }
 
-    val newCardsAllowance = (dailyLimit - newCardsStudiedToday).coerceAtLeast(0)
+    val newCardsAllowance by remember {
+        derivedStateOf { (dailyLimit - newCardsStudiedToday).coerceAtLeast(0) }
+    }
 
     // Scheduled reviews + lapsed reviews from previous days (failed reviews whose repetitions got reset)
-    val dueReviews = remember(deckCards, now) {
-        deckCards.filter { 
-            it.firstStudiedTimeMillis > 0L && 
-            !isSameDay(it.firstStudiedTimeMillis, now) && 
-            it.nextReviewTimeMillis <= now 
+    val dueReviews by remember(now) {
+        derivedStateOf {
+            deckCards.filter { 
+                it.firstStudiedTimeMillis > 0L && 
+                !isSameDay(it.firstStudiedTimeMillis, now) && 
+                it.nextReviewTimeMillis <= now 
+            }
         }
     }
     
     // New cards that were introduced today but not yet successfully graduated (repetitions == 0)
-    val introducedTodayActive = remember(deckCards, now) {
-        deckCards.filter { 
-            it.repetitions == 0 && 
-            it.firstStudiedTimeMillis > 0L && 
-            isSameDay(it.firstStudiedTimeMillis, now) 
+    val introducedTodayActive by remember(now) {
+        derivedStateOf {
+            deckCards.filter { 
+                it.repetitions == 0 && 
+                it.firstStudiedTimeMillis > 0L && 
+                isSameDay(it.firstStudiedTimeMillis, now) 
+            }
         }
     }
 
     // Completely untouched new cards (never studied before)
-    val untouchedCards = remember(deckCards) {
-        deckCards.filter { it.firstStudiedTimeMillis == 0L }
+    val untouchedCards by remember {
+        derivedStateOf { deckCards.filter { it.firstStudiedTimeMillis == 0L } }
     }
 
     // Keep track of the active queue for this study session
     val sessionQueue = remember { mutableStateListOf<Flashcard>() }
     var sessionInitialized by remember { mutableStateOf(false) }
 
-    val initialStudyCards = remember(dueReviews, introducedTodayActive, untouchedCards, newCardsAllowance) {
+    val initialStudyCards = remember(deckId) {
         val limitedUntouched = untouchedCards.shuffled().take(newCardsAllowance)
         (dueReviews + introducedTodayActive + limitedUntouched).shuffled()
     }
@@ -115,14 +121,14 @@ fun StudyScreen(
     var goodCount by remember { mutableStateOf(0) }
 
     // Cumulative calendar day stats for the completion screen (retrieved from database in local timezone)
-    val todayStudiedCount = remember(deckCards, now) {
-        deckCards.count { it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    val todayStudiedCount by remember(now) {
+        derivedStateOf { deckCards.count { it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) } }
     }
-    val todayAgainCount = remember(deckCards, now) {
-        deckCards.count { it.repetitions == 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    val todayAgainCount by remember(now) {
+        derivedStateOf { deckCards.count { it.repetitions == 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) } }
     }
-    val todayGoodCount = remember(deckCards, now) {
-        deckCards.count { it.repetitions > 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) }
+    val todayGoodCount by remember(now) {
+        derivedStateOf { deckCards.count { it.repetitions > 0 && it.lastStudiedTimeMillis > 0L && isSameDay(it.lastStudiedTimeMillis, now) } }
     }
 
     Scaffold(
