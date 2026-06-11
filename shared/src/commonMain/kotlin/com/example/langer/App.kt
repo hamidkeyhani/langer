@@ -27,7 +27,6 @@ fun App(onExit: () -> Unit = {}) {
     val categoriesState = remember { mutableStateListOf<String>() }
     
     var isDarkTheme by remember { mutableStateOf(true) }
-    var dailyLimit by remember { mutableStateOf(20) }
     var isLoading by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
 
@@ -35,7 +34,6 @@ fun App(onExit: () -> Unit = {}) {
     LaunchedEffect(Unit) {
         // Load settings preference
         isDarkTheme = storage.getThemePreference()
-        dailyLimit = storage.getDailyNewCardsLimit()
         categoriesState.addAll(storage.getCategories())
 
         // 1. Read and Parse JSON with ignoreUnknownKeys = true to avoid strict deserialization errors
@@ -187,10 +185,13 @@ fun App(onExit: () -> Unit = {}) {
                                 isDarkTheme = !isDarkTheme
                                 storage.saveThemePreference(isDarkTheme)
                             },
-                            dailyLimit = dailyLimit,
-                            onUpdateDailyLimit = { limit ->
-                                dailyLimit = limit
-                                storage.saveDailyNewCardsLimit(limit)
+                            onUpdateDeckLimit = { deckId, limit ->
+                                val index = decksState.indexOfFirst { it.id == deckId }
+                                if (index != -1) {
+                                    val updatedDeck = decksState[index].copy(dailyLimit = limit)
+                                    decksState[index] = updatedDeck
+                                    storage.saveDecks(decksState.toList())
+                                }
                             },
                             onStudyDeck = { navigator.navigateTo(Screen.Study(it)) },
                             onManageDeck = { navigator.navigateTo(Screen.CardManager(it)) },
@@ -214,7 +215,7 @@ fun App(onExit: () -> Unit = {}) {
                             deckId = screen.deckId,
                             deckName = deck?.name ?: "Study",
                             allCards = cardsState,
-                            dailyLimit = dailyLimit,
+                            dailyLimit = deck?.dailyLimit ?: 20,
                             onSaveCard = { card ->
                                 val idx = cardsState.indexOfFirst { it.id == card.id }
                                 if (idx >= 0) {

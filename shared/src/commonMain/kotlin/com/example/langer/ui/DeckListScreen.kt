@@ -33,8 +33,7 @@ fun DeckListScreen(
     onAddCategory: (String) -> Unit,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
-    dailyLimit: Int,
-    onUpdateDailyLimit: (Int) -> Unit,
+    onUpdateDeckLimit: (String, Int) -> Unit,
     onStudyDeck: (String) -> Unit,
     onManageDeck: (String) -> Unit,
     onBulkImport: (String) -> Unit,
@@ -89,8 +88,15 @@ fun DeckListScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showSettingsDialog = true }) {
-                        Icon(Icons.Default.Settings, contentDescription = "Settings")
+                    IconButton(
+                        onClick = { showSettingsDialog = true },
+                        enabled = currentActiveDeck != null
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Settings",
+                            tint = if (currentActiveDeck != null) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
+                        )
                     }
                     IconButton(onClick = { showCreateDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Create Deck")
@@ -578,10 +584,10 @@ fun DeckListScreen(
     }
 
     // Settings dialog
-    if (showSettingsDialog) {
+    if (showSettingsDialog && currentActiveDeck != null) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
-            title = { Text("Settings", fontWeight = FontWeight.Bold) },
+            title = { Text("Deck Settings", fontWeight = FontWeight.Bold) },
             text = {
                 Column(
                     modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
@@ -592,6 +598,12 @@ fun DeckListScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                     )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = "For deck '${currentActiveDeck.name}'",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -600,8 +612,8 @@ fun DeckListScreen(
                     ) {
                         IconButton(
                             onClick = {
-                                if (dailyLimit > 5) {
-                                    onUpdateDailyLimit(dailyLimit - 5)
+                                if (currentActiveDeck.dailyLimit > 5) {
+                                    onUpdateDeckLimit(currentActiveDeck.id, currentActiveDeck.dailyLimit - 5)
                                 }
                             },
                             colors = IconButtonDefaults.iconButtonColors(
@@ -614,7 +626,7 @@ fun DeckListScreen(
                         Spacer(modifier = Modifier.width(24.dp))
                         
                         Text(
-                            text = "$dailyLimit",
+                            text = "${currentActiveDeck.dailyLimit}",
                             style = MaterialTheme.typography.headlineLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -624,8 +636,8 @@ fun DeckListScreen(
                         
                         IconButton(
                             onClick = {
-                                if (dailyLimit < 100) {
-                                    onUpdateDailyLimit(dailyLimit + 5)
+                                if (currentActiveDeck.dailyLimit < 100) {
+                                    onUpdateDeckLimit(currentActiveDeck.id, currentActiveDeck.dailyLimit + 5)
                                 }
                             },
                             colors = IconButtonDefaults.iconButtonColors(
@@ -637,7 +649,7 @@ fun DeckListScreen(
                     }
                     Spacer(modifier = Modifier.height(8.dp))
                     Text(
-                        "Limit new words introduced per day (Max 100).",
+                        "Limit new words introduced in this deck per day (Max 100).",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
                         textAlign = androidx.compose.ui.text.style.TextAlign.Center

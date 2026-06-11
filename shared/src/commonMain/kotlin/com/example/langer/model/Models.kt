@@ -42,7 +42,8 @@ data class Deck(
     val id: String = generateId(),
     val name: String,
     val description: String = "",
-    val category: String = "Brainstorm"
+    val category: String = "Brainstorm",
+    val dailyLimit: Int = 20
 )
 
 object SrsEngine {
