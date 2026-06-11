@@ -64,21 +64,36 @@ fun StudyScreen(
 
     val newCardsAllowance = (dailyLimit - newCardsStudiedToday).coerceAtLeast(0)
 
+    // Scheduled reviews + lapsed reviews from previous days (failed reviews whose repetitions got reset)
     val dueReviews = remember(deckCards, now) {
-        deckCards.filter { it.repetitions > 0 && it.nextReviewTimeMillis <= now }
+        deckCards.filter { 
+            it.firstStudiedTimeMillis > 0L && 
+            !isSameDay(it.firstStudiedTimeMillis, now) && 
+            it.nextReviewTimeMillis <= now 
+        }
     }
     
-    val newCardsAvailable = remember(deckCards) {
-        deckCards.filter { it.repetitions == 0 }
+    // New cards that were introduced today but not yet successfully graduated (repetitions == 0)
+    val introducedTodayActive = remember(deckCards, now) {
+        deckCards.filter { 
+            it.repetitions == 0 && 
+            it.firstStudiedTimeMillis > 0L && 
+            isSameDay(it.firstStudiedTimeMillis, now) 
+        }
+    }
+
+    // Completely untouched new cards (never studied before)
+    val untouchedCards = remember(deckCards) {
+        deckCards.filter { it.firstStudiedTimeMillis == 0L }
     }
 
     // Keep track of the active queue for this study session
     val sessionQueue = remember { mutableStateListOf<Flashcard>() }
     var sessionInitialized by remember { mutableStateOf(false) }
 
-    val initialStudyCards = remember(dueReviews, newCardsAvailable, newCardsAllowance) {
-        val limitedNew = newCardsAvailable.shuffled().take(newCardsAllowance)
-        (dueReviews + limitedNew).shuffled()
+    val initialStudyCards = remember(dueReviews, introducedTodayActive, untouchedCards, newCardsAllowance) {
+        val limitedUntouched = untouchedCards.shuffled().take(newCardsAllowance)
+        (dueReviews + introducedTodayActive + limitedUntouched).shuffled()
     }
 
     if (!sessionInitialized) {
