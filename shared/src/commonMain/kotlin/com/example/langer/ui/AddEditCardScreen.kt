@@ -45,6 +45,44 @@ fun AddEditCardScreen(
 
     val isEditing = cardId != null
 
+    // Debounced automatic trigger for known dictionary words
+    LaunchedEffect(word) {
+        if (word.isNotBlank() && !isEditing) {
+            delay(2000)
+            if (LocalAiModel.isKnownWord(word) && !isGenerating) {
+                isGenerating = true
+                delay(300)
+                try {
+                    val generated = LocalAiModel.generateWordDetails(word)
+                    if (generated.word.isNotBlank()) {
+                        suspend fun animateTyping(target: String, update: (String) -> Unit) {
+                            var current = ""
+                            for (char in target) {
+                                current += char
+                                update(current)
+                                delay(10)
+                            }
+                        }
+                        
+                        phonetic = ""
+                        meaning = ""
+                        example = ""
+                        
+                        animateTyping(generated.phonetic) { phonetic = it }
+                        delay(120)
+                        animateTyping(generated.meaning) { meaning = it }
+                        delay(120)
+                        animateTyping(generated.example) { example = it }
+                    }
+                } catch (e: Exception) {
+                    // ignore
+                } finally {
+                    isGenerating = false
+                }
+            }
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -99,9 +137,24 @@ fun AddEditCardScreen(
                                         try {
                                             val generated = LocalAiModel.generateWordDetails(word)
                                             if (generated.word.isNotBlank()) {
-                                                phonetic = generated.phonetic
-                                                meaning = generated.meaning
-                                                example = generated.example
+                                                suspend fun animateTyping(target: String, update: (String) -> Unit) {
+                                                    var current = ""
+                                                    for (char in target) {
+                                                        current += char
+                                                        update(current)
+                                                        delay(10)
+                                                    }
+                                                }
+                                                
+                                                phonetic = ""
+                                                meaning = ""
+                                                example = ""
+                                                
+                                                animateTyping(generated.phonetic) { phonetic = it }
+                                                delay(120)
+                                                animateTyping(generated.meaning) { meaning = it }
+                                                delay(120)
+                                                animateTyping(generated.example) { example = it }
                                             }
                                         } catch (e: Exception) {
                                             // Fallback or ignore

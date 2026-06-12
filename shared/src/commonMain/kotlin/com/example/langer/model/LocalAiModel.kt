@@ -20,6 +20,15 @@ object LocalAiModel {
         }
     }
 
+    // Check if the word is in the essential words JSON or our extra dictionary
+    suspend fun isKnownWord(inputWord: String): Boolean {
+        val normalized = inputWord.trim().lowercase()
+        if (normalized.isBlank()) return false
+        val localWords = getSeedWords()
+        if (localWords.any { it.word.trim().lowercase() == normalized }) return true
+        return extraDictionary.containsKey(normalized)
+    }
+
     // AI generation logic
     suspend fun generateWordDetails(inputWord: String): SeedWord {
         val normalized = inputWord.trim().lowercase()
