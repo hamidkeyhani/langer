@@ -100,4 +100,13 @@ class LangerStorage(private val storage: KeyValueStorage) {
     fun saveSelectedDeckIdForCategory(category: String, deckId: String) {
         storage.putString("langer_selected_deck_id_$category", deckId)
     }
+
+    fun getHasSeeded(): Boolean {
+        return storage.getString("langer_has_seeded")?.toBoolean() ?: false
+    }
+
+    fun saveHasSeeded(hasSeeded: Boolean) {
+        storage.putString("langer_has_seeded", hasSeeded.toString())
+    }
 }
+

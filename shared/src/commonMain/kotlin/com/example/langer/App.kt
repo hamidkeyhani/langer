@@ -58,13 +58,10 @@ fun App(onExit: () -> Unit = {}) {
         var loadedDecks = storage.getDecks()
         var loadedCards = storage.getCards()
 
-        // 2. Force re-seed/synchronization if:
-        //    - Database is empty (first launch)
-        //    - Loaded cards is <= 5 (meaning it previously fell back to the 5 default cards due to JSON parsing error)
-        //    - Loaded cards size does not match seedWords size (meaning JSON was changed/updated by the user)
-        val shouldReSeed = loadedDecks.isEmpty() || loadedCards.size <= 5 || (seedWords.isNotEmpty() && loadedCards.size != seedWords.size)
+        // 2. Seed initial/default data if not seeded yet or if database is empty (first launch)
+        val shouldSeed = !storage.getHasSeeded() || loadedDecks.isEmpty()
 
-        if (shouldReSeed) {
+        if (shouldSeed) {
             val defaultDeck = Deck(
                 name = "Essential English Words",
                 description = "Complete essential academic vocabulary list"
@@ -123,6 +120,7 @@ fun App(onExit: () -> Unit = {}) {
             
             storage.saveDecks(loadedDecks)
             storage.saveCards(loadedCards)
+            storage.saveHasSeeded(true)
         }
 
         decksState.clear()
