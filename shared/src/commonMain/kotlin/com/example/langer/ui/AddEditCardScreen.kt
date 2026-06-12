@@ -30,6 +30,7 @@ enum class ValidationStatus {
 @Composable
 fun AddEditCardScreen(
     deckId: String,
+    deckName: String,
     cardId: String?,
     allCards: List<Flashcard>,
     onSave: (word: String, phonetic: String, meaning: String, example: String) -> Unit,
@@ -95,7 +96,16 @@ fun AddEditCardScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(if (isEditing) "Edit Word" else "Add New Word", fontWeight = FontWeight.Bold) },
+                title = {
+                    Column {
+                        Text(if (isEditing) "Edit Word" else "Add New Word", fontWeight = FontWeight.Bold)
+                        Text(
+                            "Deck: $deckName",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        )
+                    }
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.Default.ArrowBack, contentDescription = "Back")

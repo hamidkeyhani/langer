@@ -35,6 +35,7 @@ fun DeckListScreen(
     onToggleTheme: () -> Unit,
     onUpdateDeckLimit: (String, Int) -> Unit,
     onStudyDeck: (String) -> Unit,
+    onAddCard: (String) -> Unit,
     onManageDeck: (String) -> Unit,
     onBulkImport: (String) -> Unit,
     onCreateDeck: (String, String, String) -> Unit,
@@ -304,7 +305,7 @@ fun DeckListScreen(
                             subtitle = "Add a custom vocabulary card",
                             iconColor = ActionColors.Red,
                             icon = Icons.Default.Add,
-                            onClick = { onManageDeck(currentActiveDeck.id) } // goes to card manager where they tap FAB
+                            onClick = { onAddCard(currentActiveDeck.id) }
                         )
                     }
                     item {

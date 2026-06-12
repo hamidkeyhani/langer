@@ -194,6 +194,7 @@ fun App(onExit: () -> Unit = {}) {
                                 }
                             },
                             onStudyDeck = { navigator.navigateTo(Screen.Study(it)) },
+                            onAddCard = { navigator.navigateTo(Screen.AddEditCard(it, null)) },
                             onManageDeck = { navigator.navigateTo(Screen.CardManager(it)) },
                             onBulkImport = { navigator.navigateTo(Screen.BulkImport(it)) },
                             onCreateDeck = { name, desc, category ->
@@ -244,8 +245,10 @@ fun App(onExit: () -> Unit = {}) {
                         )
                     }
                     is Screen.AddEditCard -> {
+                        val deck = decksState.find { it.id == screen.deckId }
                         AddEditCardScreen(
                             deckId = screen.deckId,
+                            deckName = deck?.name ?: "Unknown Deck",
                             cardId = screen.cardId,
                             allCards = cardsState,
                             onSave = { word, phonetic, meaning, example ->
