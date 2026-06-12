@@ -197,8 +197,7 @@ fun App(onExit: () -> Unit = {}) {
                             onAddCard = { navigator.navigateTo(Screen.AddEditCard(it, null)) },
                             onManageDeck = { navigator.navigateTo(Screen.CardManager(it)) },
                             onBulkImport = { navigator.navigateTo(Screen.BulkImport(it)) },
-                            onCreateDeck = { name, desc, category ->
-                                val newDeck = Deck(name = name, description = desc, category = category)
+                            onCreateDeck = { newDeck ->
                                 decksState.add(newDeck)
                                 storage.saveDecks(decksState.toList())
                             },

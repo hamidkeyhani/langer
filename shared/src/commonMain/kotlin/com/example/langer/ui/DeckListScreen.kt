@@ -1,6 +1,7 @@
 package com.example.langer.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -38,7 +39,7 @@ fun DeckListScreen(
     onAddCard: (String) -> Unit,
     onManageDeck: (String) -> Unit,
     onBulkImport: (String) -> Unit,
-    onCreateDeck: (String, String, String) -> Unit,
+    onCreateDeck: (Deck) -> Unit,
     onDeleteDeck: (String) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
@@ -139,7 +140,11 @@ fun DeckListScreen(
                         modifier = Modifier
                             .clip(RoundedCornerShape(50.dp))
                             .background(pillBg)
-                            .clickable { selectedCategory = category }
+                            .clickable { 
+                                selectedCategory = category 
+                                val firstDeck = decks.firstOrNull { it.category == category }
+                                activeDeckId = firstDeck?.id ?: ""
+                            }
                             .padding(horizontal = 20.dp, vertical = 10.dp)
                     ) {
                         Text(
@@ -170,6 +175,49 @@ fun DeckListScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
+
+            // Decks in the selected category
+            if (filteredDecks.isNotEmpty()) {
+                Text(
+                    text = "Select Deck:",
+                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                )
+
+                LazyRow(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    items(filteredDecks) { deck ->
+                        val isSelected = deck.id == currentActiveDeck?.id
+                        val pillBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                        val pillBorderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                        val pillText = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        val wordCount = cards.count { it.deckId == deck.id }
+                        
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(12.dp))
+                                .background(pillBg)
+                                .border(1.dp, pillBorderColor, RoundedCornerShape(12.dp))
+                                .clickable { activeDeckId = deck.id }
+                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = "${deck.name} ($wordCount)",
+                                style = MaterialTheme.typography.bodyMedium.copy(
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                ),
+                                color = pillText
+                            )
+                        }
+                    }
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+            }
 
             // Main Featured Card (Active Deck)
             if (currentActiveDeck != null) {
@@ -516,7 +564,10 @@ fun DeckListScreen(
                 Button(
                     onClick = {
                         if (deckName.isNotBlank()) {
-                            onCreateDeck(deckName, deckDesc, selectedCategoryForNewDeck)
+                            val newDeck = Deck(name = deckName, description = deckDesc, category = selectedCategoryForNewDeck)
+                            onCreateDeck(newDeck)
+                            selectedCategory = selectedCategoryForNewDeck
+                            activeDeckId = newDeck.id
                             deckName = ""
                             deckDesc = ""
                             showCreateDialog = false
