@@ -6,6 +6,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -13,6 +14,10 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.langer.model.Flashcard
+import com.example.langer.model.LocalAiModel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -34,6 +39,9 @@ fun AddEditCardScreen(
 
     var wordError by remember { mutableStateOf(false) }
     var meaningError by remember { mutableStateOf(false) }
+    var isGenerating by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
 
     val isEditing = cardId != null
 
@@ -72,6 +80,44 @@ fun AddEditCardScreen(
                 supportingText = {
                     if (wordError) {
                         Text("Word cannot be empty", color = MaterialTheme.colorScheme.error)
+                    }
+                },
+                trailingIcon = {
+                    if (word.isNotBlank()) {
+                        if (isGenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            IconButton(
+                                onClick = {
+                                    coroutineScope.launch {
+                                        isGenerating = true
+                                        delay(800)
+                                        try {
+                                            val generated = LocalAiModel.generateWordDetails(word)
+                                            if (generated.word.isNotBlank()) {
+                                                phonetic = generated.phonetic
+                                                meaning = generated.meaning
+                                                example = generated.example
+                                            }
+                                        } catch (e: Exception) {
+                                            // Fallback or ignore
+                                        } finally {
+                                            isGenerating = false
+                                        }
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Confirm and Auto-Fill",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
