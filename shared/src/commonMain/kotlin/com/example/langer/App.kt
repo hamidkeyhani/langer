@@ -180,11 +180,20 @@ fun App(onExit: () -> Unit = {}) {
                             onCategorySelected = { cat ->
                                 selectedCategory = cat
                                 storage.saveSelectedCategory(cat)
+                                val lastDeckId = storage.getSelectedDeckIdForCategory(cat)
+                                val resolvedDeckId = if (lastDeckId != null && decksState.any { it.id == lastDeckId && it.category == cat }) {
+                                    lastDeckId
+                                } else {
+                                    decksState.firstOrNull { it.category == cat }?.id ?: ""
+                                }
+                                activeDeckId = resolvedDeckId
+                                storage.saveSelectedDeckId(resolvedDeckId)
                             },
                             activeDeckId = activeDeckId,
                             onActiveDeckIdSelected = { id ->
                                 activeDeckId = id
                                 storage.saveSelectedDeckId(id)
+                                storage.saveSelectedDeckIdForCategory(selectedCategory, id)
                             },
                             onAddCategory = { newCategory ->
                                 if (!categoriesState.contains(newCategory)) {

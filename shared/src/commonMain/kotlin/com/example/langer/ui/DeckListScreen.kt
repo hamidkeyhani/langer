@@ -142,8 +142,6 @@ fun DeckListScreen(
                             .background(pillBg)
                             .clickable { 
                                 onCategorySelected(category) 
-                                val firstDeck = decks.firstOrNull { it.category == category }
-                                onActiveDeckIdSelected(firstDeck?.id ?: "")
                             }
                             .padding(horizontal = 20.dp, vertical = 10.dp)
                     ) {
