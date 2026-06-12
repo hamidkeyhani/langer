@@ -76,4 +76,20 @@ class LangerStorage(private val storage: KeyValueStorage) {
         val str = json.encodeToString(ListSerializer(serializer<String>()), categories)
         storage.putString("langer_categories", str)
     }
+
+    fun getSelectedCategory(): String? {
+        return storage.getString("langer_selected_category")
+    }
+
+    fun saveSelectedCategory(category: String) {
+        storage.putString("langer_selected_category", category)
+    }
+
+    fun getSelectedDeckId(): String? {
+        return storage.getString("langer_selected_deck_id")
+    }
+
+    fun saveSelectedDeckId(deckId: String) {
+        storage.putString("langer_selected_deck_id", deckId)
+    }
 }

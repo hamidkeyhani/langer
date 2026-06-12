@@ -31,6 +31,10 @@ fun DeckListScreen(
     decks: List<Deck>,
     cards: List<Flashcard>,
     categories: List<String>,
+    selectedCategory: String,
+    onCategorySelected: (String) -> Unit,
+    activeDeckId: String,
+    onActiveDeckIdSelected: (String) -> Unit,
     onAddCategory: (String) -> Unit,
     isDarkTheme: Boolean,
     onToggleTheme: () -> Unit,
@@ -53,16 +57,12 @@ fun DeckListScreen(
 
     val now = currentTimeMillis()
 
-    // Category pills state
-    var selectedCategory by remember { mutableStateOf("Brainstorm") }
-
     // Filter decks belonging to the selected category reactively using derivedStateOf
     val filteredDecks by remember(decks, selectedCategory) {
         derivedStateOf { decks.filter { it.category == selectedCategory } }
     }
 
     // Manage active deck state reactively
-    var activeDeckId by remember { mutableStateOf("") }
     val activeDeck by remember(decks, activeDeckId, selectedCategory) {
         derivedStateOf {
             filteredDecks.find { it.id == activeDeckId } ?: filteredDecks.firstOrNull()
@@ -141,9 +141,9 @@ fun DeckListScreen(
                             .clip(RoundedCornerShape(50.dp))
                             .background(pillBg)
                             .clickable { 
-                                selectedCategory = category 
+                                onCategorySelected(category) 
                                 val firstDeck = decks.firstOrNull { it.category == category }
-                                activeDeckId = firstDeck?.id ?: ""
+                                onActiveDeckIdSelected(firstDeck?.id ?: "")
                             }
                             .padding(horizontal = 20.dp, vertical = 10.dp)
                     ) {
@@ -202,7 +202,7 @@ fun DeckListScreen(
                                 .clip(RoundedCornerShape(12.dp))
                                 .background(pillBg)
                                 .border(1.dp, pillBorderColor, RoundedCornerShape(12.dp))
-                                .clickable { activeDeckId = deck.id }
+                                .clickable { onActiveDeckIdSelected(deck.id) }
                                 .padding(horizontal = 14.dp, vertical = 8.dp)
                         ) {
                             Text(
@@ -387,7 +387,7 @@ fun DeckListScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable {
-                                    activeDeckId = deck.id
+                                    onActiveDeckIdSelected(deck.id)
                                     showSwitchDeckDialog = false
                                 },
                             shape = RoundedCornerShape(12.dp),
@@ -566,8 +566,8 @@ fun DeckListScreen(
                         if (deckName.isNotBlank()) {
                             val newDeck = Deck(name = deckName, description = deckDesc, category = selectedCategoryForNewDeck)
                             onCreateDeck(newDeck)
-                            selectedCategory = selectedCategoryForNewDeck
-                            activeDeckId = newDeck.id
+                            onCategorySelected(selectedCategoryForNewDeck)
+                            onActiveDeckIdSelected(newDeck.id)
                             deckName = ""
                             deckDesc = ""
                             showCreateDialog = false
@@ -617,7 +617,7 @@ fun DeckListScreen(
                     onClick = {
                         onDeleteDeck(deck.id)
                         if (activeDeckId == deck.id) {
-                            activeDeckId = filteredDecks.firstOrNull { it.id != deck.id }?.id ?: ""
+                            onActiveDeckIdSelected(filteredDecks.firstOrNull { it.id != deck.id }?.id ?: "")
                         }
                         deckToDelete = null
                         showSwitchDeckDialog = false
@@ -788,7 +788,8 @@ fun DeckListScreen(
                         val trimmed = newCategoryName.trim()
                         if (trimmed.isNotBlank()) {
                             onAddCategory(trimmed)
-                            selectedCategory = trimmed // Switch to it automatically
+                            onCategorySelected(trimmed) // Switch to it automatically
+                            onActiveDeckIdSelected("") // No deck in the new category
                             newCategoryName = ""
                             showAddCategoryDialog = false
                         }

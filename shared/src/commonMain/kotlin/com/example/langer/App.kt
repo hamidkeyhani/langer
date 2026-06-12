@@ -29,6 +29,8 @@ fun App(onExit: () -> Unit = {}) {
     var isDarkTheme by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
     var showExitDialog by remember { mutableStateOf(false) }
+    var selectedCategory by remember { mutableStateOf(storage.getSelectedCategory() ?: "Brainstorm") }
+    var activeDeckId by remember { mutableStateOf(storage.getSelectedDeckId() ?: "") }
 
     // Seed and Load initial data
     LaunchedEffect(Unit) {
@@ -174,6 +176,16 @@ fun App(onExit: () -> Unit = {}) {
                             decks = decksState,
                             cards = cardsState,
                             categories = categoriesState,
+                            selectedCategory = selectedCategory,
+                            onCategorySelected = { cat ->
+                                selectedCategory = cat
+                                storage.saveSelectedCategory(cat)
+                            },
+                            activeDeckId = activeDeckId,
+                            onActiveDeckIdSelected = { id ->
+                                activeDeckId = id
+                                storage.saveSelectedDeckId(id)
+                            },
                             onAddCategory = { newCategory ->
                                 if (!categoriesState.contains(newCategory)) {
                                     categoriesState.add(newCategory)
