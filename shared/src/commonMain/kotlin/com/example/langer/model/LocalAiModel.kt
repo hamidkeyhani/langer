@@ -1,11 +1,52 @@
 package com.example.langer.model
 
+import io.ktor.client.*
+import io.ktor.client.call.*
+import io.ktor.client.plugins.contentnegotiation.*
+import io.ktor.client.request.*
+import io.ktor.serialization.kotlinx.json.*
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import langer.shared.generated.resources.Res
+
+@Serializable
+data class DictionaryWord(
+    val word: String,
+    val phonetic: String? = null,
+    val phonetics: List<DictionaryPhonetic> = emptyList(),
+    val meanings: List<DictionaryMeaning> = emptyList()
+)
+
+@Serializable
+data class DictionaryPhonetic(
+    val text: String? = null,
+    val audio: String? = null
+)
+
+@Serializable
+data class DictionaryMeaning(
+    val partOfSpeech: String,
+    val definitions: List<DictionaryDefinition> = emptyList()
+)
+
+@Serializable
+data class DictionaryDefinition(
+    val definition: String,
+    val example: String? = null
+)
 
 object LocalAiModel {
     private val jsonParser = Json { ignoreUnknownKeys = true }
     private var cachedSeedWords: List<SeedWord>? = null
+
+    private val client = HttpClient {
+        install(ContentNegotiation) {
+            json(Json {
+                ignoreUnknownKeys = true
+                coerceInputValues = true
+            })
+        }
+    }
 
     // Load words list from compose resources
     suspend fun getSeedWords(): List<SeedWord> {
@@ -20,13 +61,23 @@ object LocalAiModel {
         }
     }
 
-    // Check if the word is in the essential words JSON or our extra dictionary
+    // Check if the word is in the essential words JSON, commonWordsSet, or query the online API
     suspend fun isKnownWord(inputWord: String): Boolean {
         val normalized = inputWord.trim().lowercase()
         if (normalized.isBlank()) return false
+        
+        // 1. Quick local checks
         val localWords = getSeedWords()
         if (localWords.any { it.word.trim().lowercase() == normalized }) return true
-        return extraDictionary.containsKey(normalized)
+        if (commonWordsSet.contains(normalized)) return true
+        
+        // 2. Query online dictionary API
+        return try {
+            val response = client.get("https://api.dictionaryapi.dev/api/v2/entries/en/$normalized")
+            response.status.value == 200
+        } catch (e: Exception) {
+            false
+        }
     }
 
     // AI generation logic
@@ -41,21 +92,64 @@ object LocalAiModel {
             return matched
         }
 
-        // 2. Check our extra dictionary of common words
-        val extraMatched = extraDictionary[normalized]
-        if (extraMatched != null) {
-            return SeedWord(
-                word = inputWord,
-                phonetic = extraMatched.phonetic,
-                meaning = extraMatched.meaning,
-                example = extraMatched.example
-            )
+        // 2. Query online dictionary API
+        try {
+            val response = client.get("https://api.dictionaryapi.dev/api/v2/entries/en/$normalized")
+            if (response.status.value == 200) {
+                val wordsList = response.body<List<DictionaryWord>>()
+                if (wordsList.isNotEmpty()) {
+                    val dictWord = wordsList[0]
+                    
+                    // Extract phonetic
+                    var phoneticText = dictWord.phonetic ?: ""
+                    if (phoneticText.isBlank() && dictWord.phonetics.isNotEmpty()) {
+                        phoneticText = dictWord.phonetics.find { !it.text.isNullOrBlank() }?.text ?: ""
+                    }
+                    if (phoneticText.isBlank()) {
+                        phoneticText = generatePhonetic(normalized)
+                    }
+
+                    // Extract meaning and example
+                    var meaningText = ""
+                    var exampleText = ""
+                    var firstPartOfSpeech = ""
+
+                    if (dictWord.meanings.isNotEmpty()) {
+                        firstPartOfSpeech = dictWord.meanings[0].partOfSpeech
+                        for (meaning in dictWord.meanings) {
+                            val defObj = meaning.definitions.find { it.definition.isNotBlank() }
+                            if (defObj != null) {
+                                meaningText = defObj.definition
+                                exampleText = defObj.example ?: ""
+                                break
+                            }
+                        }
+                    }
+
+                    if (meaningText.isBlank()) {
+                        val fallback = generateMeaningAndExample(inputWord)
+                        meaningText = fallback.first
+                        exampleText = fallback.second
+                    } else if (exampleText.isBlank()) {
+                        exampleText = generateContextualExample(inputWord, meaningText, firstPartOfSpeech)
+                    }
+
+                    return SeedWord(
+                        word = inputWord,
+                        phonetic = phoneticText,
+                        meaning = meaningText,
+                        example = exampleText
+                    )
+                }
+            }
+        } catch (e: Exception) {
+            // Fallback on network/deserialization errors
         }
 
-        // 3. Rule-based AI generator for phonetic spelling
+        // 3. Fallback: Rule-based AI generator for phonetic spelling
         val phonetic = generatePhonetic(normalized)
 
-        // 4. Rule-based AI generator for meaning and example sentence
+        // 4. Fallback: Rule-based AI generator for meaning and example sentence
         val (meaning, example) = generateMeaningAndExample(inputWord)
 
         return SeedWord(
@@ -100,6 +194,31 @@ object LocalAiModel {
             sb.append(mapped)
         }
         return "/${sb.toString()}/"
+    }
+
+    private fun generateContextualExample(word: String, meaning: String, partOfSpeech: String? = null): String {
+        val w = word.lowercase().trim()
+        val pos = partOfSpeech?.lowercase() ?: when {
+            w.endsWith("ly") -> "adverb"
+            w.endsWith("tion") || w.endsWith("ness") || w.endsWith("ment") -> "noun"
+            w.endsWith("able") || w.endsWith("ible") || w.endsWith("ful") || w.endsWith("less") -> "adjective"
+            w.endsWith("ify") || w.endsWith("ize") || w.endsWith("ise") -> "verb"
+            else -> "noun"
+        }
+
+        return when (pos) {
+            "noun" -> {
+                if (w == "phone" || w == "laptop" || w == "computer" || w == "book" || w == "pen" || w == "car") {
+                    "Can I borrow your $w for a minute?"
+                } else {
+                    "We need to find a better $w to solve this problem."
+                }
+            }
+            "verb" -> "They decided to $w the plan immediately."
+            "adjective" -> "The solution was highly $w and met all our requirements."
+            "adverb" -> "She completed the assignment $w and without any errors."
+            else -> "We need to discuss this $w in detail."
+        }
     }
 
     private fun generateMeaningAndExample(word: String): Pair<String, String> {
@@ -179,25 +298,13 @@ object LocalAiModel {
             else -> {
                 Pair(
                     "To perform or relate to the action, quality, or concept of '${word}'.",
-                    "We need to ${w} the new features during our next session."
+                    generateContextualExample(word, "")
                 )
             }
         }
     }
 
-    private val extraDictionary = mapOf(
-        "learn" to SeedWord("learn", "/lɜːn/", "To acquire knowledge or skill in something by study or experience", "She wants to learn a new language."),
-        "study" to SeedWord("study", "/ˈstʌdi/", "To devote time and attention to acquiring knowledge on an academic subject", "He spends hours in the library to study."),
-        "code" to SeedWord("code", "/kəʊd/", "To write instructions for a computer program", "I love to code in Kotlin."),
-        "langer" to SeedWord("langer", "/ˈlæŋər/", "A language learning companion app designed to build active vocabulary", "Langer helps me review my words every day."),
-        "happy" to SeedWord("happy", "/ˈhæpi/", "Feeling or showing pleasure or contentment", "The good news made everyone happy."),
-        "smart" to SeedWord("smart", "/smɑːt/", "Having or showing a quick-witted intelligence", "She came up with a very smart solution."),
-        "create" to SeedWord("create", "/kriˈeɪt/", "To bring something into existence", "The artist wanted to create a masterpiece."),
-        "think" to SeedWord("think", "/θɪŋk/", "To have a particular opinion, belief, or idea about something", "I think we should start the project today."),
-        "write" to SeedWord("write", "/raɪt/", "To mark letters or words on a surface, typically paper or a screen", "He plans to write a book about his travels."),
-        "speak" to SeedWord("speak", "/spiːk/", "To say something in order to convey information or express a feeling", "They speak three languages fluently."),
-        "develop" to SeedWord("develop", "/dɪˈveləp/", "To grow or cause to grow and become more mature or advanced", "The team worked hard to develop the software."),
-        "design" to SeedWord("design", "/dɪˈzaɪn/", "To decide upon the look and functioning of a building, garment, or object", "She was hired to design the new mobile app icon."),
-        "system" to SeedWord("system", "/ˈsɪstəm/", "A set of things working together as parts of a mechanism or network", "We need a better system to manage our vocabulary decks.")
+    private val commonWordsSet = setOf(
+        "hell", "hello", "yes", "no", "good", "bad", "word", "card", "deck", "plane", "airplane", "book", "read", "speak", "talk", "write", "listen", "hear", "run", "walk", "go", "come", "take", "give", "make", "do", "see", "look", "find", "get", "know", "think", "work", "play", "live", "die", "love", "hate", "like", "want", "need", "help", "thank", "please", "sorry", "excuse", "welcome", "friend", "family", "home", "house", "room", "door", "window", "wall", "floor", "roof", "garden", "city", "town", "country", "world", "earth", "sky", "sun", "moon", "star", "cloud", "rain", "snow", "wind", "fire", "water", "air", "land", "sea", "river", "lake", "tree", "plant", "flower", "grass", "animal", "dog", "cat", "bird", "fish", "horse", "cow", "sheep", "pig", "chicken", "mouse", "fly", "bee", "ant", "spider", "snake", "frog", "apple", "banana", "orange", "grape", "peach", "pear", "melon", "lemon", "lime", "berry", "cherry", "plum", "apricot", "fig", "date", "nut", "seed", "bread", "butter", "cheese", "milk", "egg", "meat", "fish", "rice", "pasta", "soup", "salad", "salt", "pepper", "sugar", "honey", "tea", "coffee", "juice", "beer", "wine", "water", "phone", "laptop", "computer"
     )
 }

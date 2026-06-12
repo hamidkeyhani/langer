@@ -19,6 +19,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 
+enum class ValidationStatus {
+    Idle,
+    Validating,
+    Valid,
+    Invalid
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddEditCardScreen(
@@ -39,7 +46,7 @@ fun AddEditCardScreen(
 
     var wordError by remember { mutableStateOf(false) }
     var meaningError by remember { mutableStateOf(false) }
-    var isGenerating by remember { mutableStateOf(false) }
+    var validationState by remember { mutableStateOf(ValidationStatus.Idle) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -49,9 +56,11 @@ fun AddEditCardScreen(
     LaunchedEffect(word) {
         if (word.isNotBlank() && !isEditing) {
             delay(2000)
-            if (LocalAiModel.isKnownWord(word) && !isGenerating) {
-                isGenerating = true
-                delay(300)
+            validationState = ValidationStatus.Validating
+            delay(800) // Simulated loading search duration
+            if (LocalAiModel.isKnownWord(word)) {
+                validationState = ValidationStatus.Valid
+                delay(200)
                 try {
                     val generated = LocalAiModel.generateWordDetails(word)
                     if (generated.word.isNotBlank()) {
@@ -76,9 +85,9 @@ fun AddEditCardScreen(
                     }
                 } catch (e: Exception) {
                     // ignore
-                } finally {
-                    isGenerating = false
                 }
+            } else {
+                validationState = ValidationStatus.Invalid
             }
         }
     }
@@ -111,18 +120,31 @@ fun AddEditCardScreen(
                 onValueChange = {
                     word = it
                     if (it.isNotBlank()) wordError = false
+                    if (validationState != ValidationStatus.Idle) {
+                        validationState = ValidationStatus.Idle
+                    }
                 },
                 label = { Text("Word *") },
                 placeholder = { Text("e.g. agree") },
-                isError = wordError,
+                isError = wordError || validationState == ValidationStatus.Invalid,
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = if (validationState == ValidationStatus.Valid) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                    unfocusedBorderColor = if (validationState == ValidationStatus.Valid) Color(0xFF10B981) else MaterialTheme.colorScheme.outline,
+                    focusedLabelColor = if (validationState == ValidationStatus.Valid) Color(0xFF10B981) else MaterialTheme.colorScheme.primary,
+                    unfocusedLabelColor = if (validationState == ValidationStatus.Valid) Color(0xFF10B981) else MaterialTheme.colorScheme.onSurfaceVariant
+                ),
                 supportingText = {
                     if (wordError) {
                         Text("Word cannot be empty", color = MaterialTheme.colorScheme.error)
+                    } else if (validationState == ValidationStatus.Invalid) {
+                        Text("Please enter a valid English word or use manual confirm", color = MaterialTheme.colorScheme.error)
+                    } else if (validationState == ValidationStatus.Valid) {
+                        Text("Word verified in dictionary", color = Color(0xFF10B981))
                     }
                 },
                 trailingIcon = {
                     if (word.isNotBlank()) {
-                        if (isGenerating) {
+                        if (validationState == ValidationStatus.Validating) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(24.dp),
                                 strokeWidth = 2.dp,
@@ -132,9 +154,10 @@ fun AddEditCardScreen(
                             IconButton(
                                 onClick = {
                                     coroutineScope.launch {
-                                        isGenerating = true
+                                        validationState = ValidationStatus.Validating
                                         delay(800)
                                         try {
+                                            val isKnown = LocalAiModel.isKnownWord(word)
                                             val generated = LocalAiModel.generateWordDetails(word)
                                             if (generated.word.isNotBlank()) {
                                                 suspend fun animateTyping(target: String, update: (String) -> Unit) {
@@ -150,16 +173,17 @@ fun AddEditCardScreen(
                                                 meaning = ""
                                                 example = ""
                                                 
+                                                validationState = if (isKnown) ValidationStatus.Valid else ValidationStatus.Idle
                                                 animateTyping(generated.phonetic) { phonetic = it }
                                                 delay(120)
                                                 animateTyping(generated.meaning) { meaning = it }
                                                 delay(120)
                                                 animateTyping(generated.example) { example = it }
+                                            } else {
+                                                validationState = ValidationStatus.Invalid
                                             }
                                         } catch (e: Exception) {
-                                            // Fallback or ignore
-                                        } finally {
-                                            isGenerating = false
+                                            validationState = ValidationStatus.Invalid
                                         }
                                     }
                                 }
@@ -167,7 +191,7 @@ fun AddEditCardScreen(
                                 Icon(
                                     imageVector = Icons.Default.Check,
                                     contentDescription = "Confirm and Auto-Fill",
-                                    tint = MaterialTheme.colorScheme.primary
+                                    tint = if (validationState == ValidationStatus.Valid) Color(0xFF10B981) else MaterialTheme.colorScheme.primary
                                 )
                             }
                         }
