@@ -3,7 +3,7 @@ package com.mizogy.langer
 import kotlin.test.Test
 import kotlin.test.assertEquals
 
-class SharedCommonTest {
+class SharedLogicAndroidHostTest {
 
     @Test
     fun example() {

@@ -1,4 +1,4 @@
-package com.example.langer
+package com.mizogy.langer
 
 import kotlin.test.Test
 import kotlin.test.assertEquals

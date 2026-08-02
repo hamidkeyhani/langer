@@ -33,7 +33,7 @@ kotlin {
     }
     
     androidLibrary {
-       namespace = "com.example.langer.shared"
+       namespace = "com.mizogy.langer.shared"
        compileSdk = libs.versions.android.compileSdk.get().toInt()
        minSdk = libs.versions.android.minSdk.get().toInt()
     

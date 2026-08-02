@@ -21,11 +21,11 @@ dependencies {
 }
 
 android {
-    namespace = "com.example.langer"
+    namespace = "com.mizogy.langer"
     compileSdk = libs.versions.android.compileSdk.get().toInt()
 
     defaultConfig {
-        applicationId = "com.example.langer"
+        applicationId = "com.mizogy.langer"
         minSdk = libs.versions.android.minSdk.get().toInt()
         targetSdk = libs.versions.android.targetSdk.get().toInt()
         versionCode = 1

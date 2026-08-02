@@ -1,4 +1,4 @@
-package com.example.langer
+package com.mizogy.langer
 
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.window.ComposeViewport

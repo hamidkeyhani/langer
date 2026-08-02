@@ -17,11 +17,11 @@ dependencies {
 
 compose.desktop {
     application {
-        mainClass = "com.example.langer.MainKt"
+        mainClass = "com.mizogy.langer.MainKt"
 
         nativeDistributions {
             targetFormats(TargetFormat.Dmg, TargetFormat.Msi, TargetFormat.Deb)
-            packageName = "com.example.langer"
+            packageName = "com.mizogy.langer"
             packageVersion = "1.0.0"
         }
     }
