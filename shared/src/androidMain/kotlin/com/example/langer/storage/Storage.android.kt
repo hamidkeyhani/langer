@@ -12,7 +12,7 @@ class AndroidStorage(private val context: Context) : KeyValueStorage {
     }
 
     override fun putString(key: String, value: String) {
-        prefs.edit().putString(key, value).apply()
+        prefs.edit().putString(key, value).commit()
     }
 }
 

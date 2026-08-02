@@ -9,6 +9,7 @@ class IosStorage : KeyValueStorage {
 
     override fun putString(key: String, value: String) {
         NSUserDefaults.standardUserDefaults.setObject(value, key)
+        NSUserDefaults.standardUserDefaults.synchronize()
     }
 }
 
