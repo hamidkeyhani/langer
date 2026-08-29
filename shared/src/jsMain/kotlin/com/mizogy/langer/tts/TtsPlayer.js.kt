@@ -3,11 +3,13 @@ package com.mizogy.langer.tts
 import kotlinx.browser.window
 
 actual object TtsPlayer {
-    actual fun speak(text: String, language: String) {
+    actual fun speak(text: String, language: String, enqueue: Boolean) {
         try {
             val synth = window.asDynamic().speechSynthesis
             if (synth != null) {
-                synth.cancel() // Stop any current speech
+                if (!enqueue) {
+                    synth.cancel() // Stop any current speech
+                }
                 val utterance = js("new SpeechSynthesisUtterance(text)")
                 utterance.lang = if (language == "en") "en-US" else language
                 synth.speak(utterance)

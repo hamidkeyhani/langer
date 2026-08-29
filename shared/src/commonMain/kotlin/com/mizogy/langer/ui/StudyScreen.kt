@@ -501,6 +501,13 @@ fun StudyScreen(
                                                 label = "Word",
                                                 onClick = { TtsPlayer.speak(currentCard.word) }
                                             )
+                                            // Meaning TTS
+                                            if (currentCard.meaning.isNotBlank()) {
+                                                AudioPlayButton(
+                                                    label = "Meaning",
+                                                    onClick = { TtsPlayer.speak(currentCard.meaning) }
+                                                )
+                                            }
                                             // Sentence TTS
                                             if (currentCard.example.isNotBlank()) {
                                                 AudioPlayButton(
@@ -512,8 +519,10 @@ fun StudyScreen(
                                                     label = "All",
                                                     onClick = {
                                                         TtsPlayer.speak(currentCard.word)
-                                                        // simple delay loop or sequential call trigger
-                                                        TtsPlayer.speak(". ${currentCard.example}")
+                                                        if (currentCard.meaning.isNotBlank()) {
+                                                            TtsPlayer.speak(currentCard.meaning, enqueue = true)
+                                                        }
+                                                        TtsPlayer.speak(currentCard.example, enqueue = true)
                                                     }
                                                 )
                                             }

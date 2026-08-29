@@ -3,7 +3,7 @@ package com.mizogy.langer.tts
 import java.io.IOException
 
 actual object TtsPlayer {
-    actual fun speak(text: String, language: String) {
+    actual fun speak(text: String, language: String, enqueue: Boolean) {
         val os = System.getProperty("os.name").lowercase()
         Thread {
             try {
