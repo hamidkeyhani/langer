@@ -40,4 +40,6 @@ actual object TtsPlayer {
             }
         }.start()
     }
+
+    actual fun stop() {}
 }

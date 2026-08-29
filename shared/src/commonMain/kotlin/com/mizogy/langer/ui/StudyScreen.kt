@@ -4,6 +4,8 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -434,7 +437,9 @@ fun StudyScreen(
 
                                     // Content Scroll Area
                                     Column(
-                                        modifier = Modifier.weight(1f),
+                                        modifier = Modifier
+                                            .weight(1f)
+                                            .verticalScroll(rememberScrollState()),
                                         verticalArrangement = Arrangement.spacedBy(16.dp)
                                     ) {
                                         // Meaning (Cyan text)
@@ -526,6 +531,18 @@ fun StudyScreen(
                                                     }
                                                 )
                                             }
+                                        }
+                                        
+                                        Spacer(modifier = Modifier.height(12.dp))
+
+                                        // Stop TTS centered under the play buttons
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth(),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            AudioStopButton(
+                                                onClick = { TtsPlayer.stop() }
+                                            )
                                         }
                                     }
                                 }
@@ -671,6 +688,37 @@ fun AudioPlayButton(
             label,
             style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+        )
+    }
+}
+
+@Composable
+fun AudioStopButton(
+    onClick: () -> Unit
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .clickable { onClick() }
+                .background(MaterialTheme.colorScheme.error.copy(alpha = 0.1f)),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Default.Stop,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(28.dp)
+            )
+        }
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            "Stop",
+            style = MaterialTheme.typography.bodyMedium.copy(fontSize = 11.sp),
+            color = MaterialTheme.colorScheme.error.copy(alpha = 0.6f)
         )
     }
 }

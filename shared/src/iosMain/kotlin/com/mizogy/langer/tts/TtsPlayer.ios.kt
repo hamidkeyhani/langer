@@ -22,4 +22,14 @@ actual object TtsPlayer {
             e.printStackTrace()
         }
     }
+
+    actual fun stop() {
+        try {
+            if (synthesizer.isSpeaking()) {
+                synthesizer.stopSpeakingAtBoundary(AVSpeechBoundary.AVSpeechBoundaryImmediate)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }

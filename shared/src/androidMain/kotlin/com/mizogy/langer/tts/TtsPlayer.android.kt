@@ -30,4 +30,8 @@ actual object TtsPlayer {
             }
         }
     }
+
+    actual fun stop() {
+        tts?.stop()
+    }
 }

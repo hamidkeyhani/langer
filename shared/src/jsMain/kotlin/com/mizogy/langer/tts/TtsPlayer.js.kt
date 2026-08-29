@@ -18,4 +18,15 @@ actual object TtsPlayer {
             e.printStackTrace()
         }
     }
+
+    actual fun stop() {
+        try {
+            val synth = window.asDynamic().speechSynthesis
+            if (synth != null) {
+                synth.cancel()
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
 }
