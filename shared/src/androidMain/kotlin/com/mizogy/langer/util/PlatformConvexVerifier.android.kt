@@ -14,7 +14,8 @@ actual class PlatformConvexVerifier actual constructor(convexUrl: String) {
                 taskStatus = appState.taskStatus,
                 extractedMarkdown = appState.extractedMarkdown,
                 devinSessionId = appState.devinSessionId,
-                devinLogs = appState.devinLogs
+                devinLogs = appState.devinLogs,
+                generatedDeckId = appState.generatedDeckId
             )
         }
     }
@@ -31,5 +32,34 @@ actual class PlatformConvexVerifier actual constructor(convexUrl: String) {
             markdown = markdown,
             sessionId = sessionId
         )
+    }
+
+    actual suspend fun triggerGeneration(url: String, taskId: String) {
+        convexService.triggerGeneration(url, taskId)
+    }
+
+    actual suspend fun getGeneratedDeck(deckId: String): TestDeck? {
+        val deck = convexService.getGeneratedDeck(deckId) ?: return null
+        return TestDeck(
+            id = deck.id,
+            name = deck.name,
+            description = deck.description,
+            category = deck.category
+        )
+    }
+
+    actual suspend fun getGeneratedCards(deckId: String): List<TestCard> {
+        return convexService.getGeneratedCards(deckId).map { card ->
+            TestCard(
+                id = card.id,
+                deckId = card.deckId,
+                word = card.word,
+                phonetic = card.phonetic,
+                meaning = card.meaning,
+                example = card.example,
+                imageUrl = card.imageUrl,
+                audioUrl = card.audioUrl
+            )
+        }
     }
 }

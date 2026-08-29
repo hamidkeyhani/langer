@@ -23,4 +23,36 @@ actual class PlatformConvexVerifier actual constructor(convexUrl: String) {
             devinSessionId = sessionId
         )
     }
+
+    actual suspend fun triggerGeneration(url: String, taskId: String) {
+        mockState.value = TestAppState(
+            taskId = taskId,
+            taskStatus = "AI Generation Triggered (JS Simulated)",
+            extractedMarkdown = "Generating from URL: $url",
+            devinSessionId = "devin-mock-session"
+        )
+    }
+
+    actual suspend fun getGeneratedDeck(deckId: String): TestDeck? {
+        return TestDeck(
+            id = deckId,
+            name = "Vocab: JS Web Preview",
+            description = "Simulated JS vocabulary deck",
+            category = "Brainstorm"
+        )
+    }
+
+    actual suspend fun getGeneratedCards(deckId: String): List<TestCard> {
+        return listOf(
+            TestCard(
+                id = "mock-js-1",
+                deckId = deckId,
+                word = "abundant",
+                phonetic = "ə'bʌndənt",
+                meaning = "Existing or available in large quantities; overflowing.",
+                example = "The website contains abundant useful reference resources.",
+                imageUrl = "https://images.unsplash.com/photo-1546410531-bb4caa6b424d"
+            )
+        )
+    }
 }

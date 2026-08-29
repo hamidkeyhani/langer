@@ -45,12 +45,15 @@ fun DeckListScreen(
     onBulkImport: (String) -> Unit,
     onCreateDeck: (Deck) -> Unit,
     onDeleteDeck: (String) -> Unit,
-    onConvexTest: () -> Unit
+    onConvexTest: () -> Unit,
+    onGenerateFromUrl: (String) -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
     var showSwitchDeckDialog by remember { mutableStateOf(false) }
     var showAddCategoryDialog by remember { mutableStateOf(false) }
+    var showGenerateDialog by remember { mutableStateOf(false) }
+    var generateUrlText by remember { mutableStateOf("") }
     var deckToDelete by remember { mutableStateOf<Deck?>(null) }
     var deckName by remember { mutableStateOf("") }
     var deckDesc by remember { mutableStateOf("") }
@@ -109,6 +112,13 @@ fun DeckListScreen(
                     }
                     IconButton(onClick = { showCreateDialog = true }) {
                         Icon(Icons.Default.Add, contentDescription = "Create Deck")
+                    }
+                    IconButton(onClick = { showGenerateDialog = true }) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = "AI Generate Deck",
+                            tint = MaterialTheme.colorScheme.primary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
@@ -431,6 +441,85 @@ fun DeckListScreen(
             confirmButton = {
                 TextButton(onClick = { showSwitchDeckDialog = false }) {
                     Text("Close")
+                }
+            }
+        )
+    }
+
+    // AI Generate Deck dialog
+    if (showGenerateDialog) {
+        AlertDialog(
+            onDismissRequest = { showGenerateDialog = false },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = MaterialTheme.colorScheme.surface,
+            tonalElevation = 8.dp,
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Bolt,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                    Text(
+                        "AI Generate Deck",
+                        style = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold),
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+            },
+            text = {
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(top = 8.dp)
+                ) {
+                    Text(
+                        "Enter the URL of any website or article. AI will scrape the page, extract essential vocabulary, generate illustrations, and build your flashcard deck.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    OutlinedTextField(
+                        value = generateUrlText,
+                        onValueChange = { generateUrlText = it },
+                        label = { Text("Webpage URL") },
+                        placeholder = { Text("https://example.com/article") },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        singleLine = true
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (generateUrlText.isNotBlank()) {
+                            onGenerateFromUrl(generateUrlText)
+                            showGenerateDialog = false
+                            generateUrlText = ""
+                        }
+                    },
+                    shape = RoundedCornerShape(100.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
+                    contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp)
+                ) {
+                    Text("Generate", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Bold))
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = { showGenerateDialog = false }
+                ) {
+                    Text("Cancel", style = MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.SemiBold))
                 }
             }
         )

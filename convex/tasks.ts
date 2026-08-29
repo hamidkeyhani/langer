@@ -59,3 +59,104 @@ export const updateState = mutation({
     }
   },
 });
+// 3. Mutation: Finish the task and save the generated deck ID
+export const finishTask = mutation({
+  args: {
+    taskId: v.string(),
+    deckId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("tasks")
+      .withIndex("by_taskId", (q) => q.eq("taskId", args.taskId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        taskStatus: "Complete",
+        generatedDeckId: args.deckId,
+        devinLogs: [...existing.devinLogs, "Generation pipeline finished successfully!"],
+      });
+    }
+  },
+});
+
+// 4. Mutation: Save generated deck details
+export const saveGeneratedDeck = mutation({
+  args: {
+    deckId: v.string(),
+    name: v.string(),
+    description: v.string(),
+    category: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const existing = await ctx.db
+      .query("decks")
+      .withIndex("by_langerId", (q) => q.eq("id", args.deckId))
+      .unique();
+
+    if (existing) {
+      await ctx.db.patch(existing._id, {
+        name: args.name,
+        description: args.description,
+        category: args.category,
+      });
+    } else {
+      await ctx.db.insert("decks", {
+        id: args.deckId,
+        name: args.name,
+        description: args.description,
+        category: args.category,
+        dailyLimit: 20,
+      });
+    }
+  },
+});
+
+// 5. Mutation: Save generated card details
+export const saveGeneratedCard = mutation({
+  args: {
+    deckId: v.string(),
+    word: v.string(),
+    phonetic: v.string(),
+    meaning: v.string(),
+    example: v.string(),
+    imageUrl: v.string(),
+    audioUrl: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const cardId = `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+    await ctx.db.insert("flashcards", {
+      id: cardId,
+      deckId: args.deckId,
+      word: args.word,
+      phonetic: args.phonetic,
+      meaning: args.meaning,
+      example: args.example,
+      imageUrl: args.imageUrl,
+      audioUrl: args.audioUrl,
+    });
+  },
+});
+
+// 6. Query: Get generated deck details
+export const getGeneratedDeck = query({
+  args: { deckId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("decks")
+      .withIndex("by_langerId", (q) => q.eq("id", args.deckId))
+      .unique();
+  },
+});
+
+// 7. Query: Get generated cards list for a deck
+export const getGeneratedCards = query({
+  args: { deckId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("flashcards")
+      .withIndex("by_deckId", (q) => q.eq("deckId", args.deckId))
+      .collect();
+  },
+});

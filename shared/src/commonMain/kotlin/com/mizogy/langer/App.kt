@@ -8,6 +8,9 @@ import kotlinx.serialization.json.Json
 import com.mizogy.langer.model.Deck
 import com.mizogy.langer.model.Flashcard
 import com.mizogy.langer.model.SeedWord
+import com.mizogy.langer.model.generateId
+import com.mizogy.langer.util.PlatformConvexVerifier
+import kotlinx.coroutines.launch
 import com.mizogy.langer.storage.LangerStorage
 import com.mizogy.langer.storage.getPlatformStorage
 import com.mizogy.langer.ui.*
@@ -25,6 +28,7 @@ fun App(onExit: () -> Unit = {}) {
     val decksState = remember { mutableStateListOf<Deck>() }
     val cardsState = remember { mutableStateListOf<Flashcard>() }
     val categoriesState = remember { mutableStateListOf<String>() }
+    val scope = rememberCoroutineScope()
     
     var isDarkTheme by remember { mutableStateOf(true) }
     var isLoading by remember { mutableStateOf(true) }
@@ -226,7 +230,20 @@ fun App(onExit: () -> Unit = {}) {
                                 storage.saveDecks(decksState.toList())
                                 storage.saveCards(cardsState.toList())
                             },
-                            onConvexTest = { navigator.navigateTo(Screen.ConvexTest) }
+                            onConvexTest = { navigator.navigateTo(Screen.ConvexTest(null)) },
+                            onGenerateFromUrl = { url ->
+                                val taskId = "task-${generateId()}"
+                                scope.launch {
+                                    val verifier = PlatformConvexVerifier("https://ideal-peccary-626.convex.cloud")
+                                    try {
+                                        verifier.updateTaskState(taskId, "Initializing...", null, null)
+                                        verifier.triggerGeneration(url, taskId)
+                                    } catch (e: Exception) {
+                                        // Logging or error status will be fetched by the subscriber
+                                    }
+                                }
+                                navigator.navigateTo(Screen.ConvexTest(taskId))
+                            }
                         )
                     }
                     is Screen.Study -> {
@@ -312,6 +329,44 @@ fun App(onExit: () -> Unit = {}) {
                     }
                     is Screen.ConvexTest -> {
                         ConvexTestScreen(
+                            taskIdParam = screen.taskId,
+                             onImportDeck = { deckName, deckId ->
+                                 scope.launch {
+                                     val verifier = PlatformConvexVerifier("https://ideal-peccary-626.convex.cloud")
+                                     val convexDeck = verifier.getGeneratedDeck(deckId)
+                                     val finalDeckName = convexDeck?.name ?: deckName
+                                     val finalDescription = convexDeck?.description ?: "AI Web Generated Deck"
+                                     val finalCategory = convexDeck?.category ?: "Brainstorm"
+
+                                     val newDeck = Deck(
+                                         id = deckId,
+                                         name = finalDeckName,
+                                         description = finalDescription,
+                                         category = finalCategory
+                                     )
+                                     decksState.removeAll { it.id == deckId }
+                                     decksState.add(newDeck)
+                                     storage.saveDecks(decksState.toList())
+
+                                     val convexCards = verifier.getGeneratedCards(deckId)
+                                     val newCards = convexCards.map { card ->
+                                         Flashcard(
+                                             id = card.id,
+                                             deckId = deckId,
+                                             word = card.word,
+                                             phonetic = card.phonetic,
+                                             meaning = card.meaning,
+                                             example = card.example,
+                                             imageUrl = card.imageUrl
+                                         )
+                                     }
+                                     cardsState.removeAll { it.deckId == deckId }
+                                     cardsState.addAll(newCards)
+                                     storage.saveCards(cardsState.toList())
+
+                                     navigator.popToRoot()
+                                 }
+                             },
                             onBack = { navigator.pop() }
                         )
                     }

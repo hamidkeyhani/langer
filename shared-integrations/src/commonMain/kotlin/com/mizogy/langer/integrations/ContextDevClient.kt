@@ -41,10 +41,9 @@ class ContextDevClient(
      * Scrapes a website and returns its LLM-ready markdown representation.
      */
     suspend fun scrapeUrl(url: String): Result<ScrapeResponse> = runCatching {
-        httpClient.post("$baseUrl/web/scrape") {
+        httpClient.get("$baseUrl/web/scrape/markdown") {
             header(HttpHeaders.Authorization, "Bearer $apiKey")
-            contentType(ContentType.Application.Json)
-            setBody(ScrapeRequest(url))
+            parameter("url", url)
         }.body()
     }
 

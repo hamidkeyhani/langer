@@ -10,7 +10,7 @@ sealed interface Screen {
     data class CardManager(val deckId: String) : Screen
     data class AddEditCard(val deckId: String, val cardId: String? = null) : Screen
     data class BulkImport(val deckId: String) : Screen
-    object ConvexTest : Screen
+    data class ConvexTest(val taskId: String? = null) : Screen
 }
 
 class Navigator(initialScreen: Screen) {

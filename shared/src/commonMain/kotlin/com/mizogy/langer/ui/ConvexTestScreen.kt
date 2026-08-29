@@ -4,6 +4,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
@@ -24,15 +26,26 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ConvexTestScreen(
+    taskIdParam: String? = null,
+    onImportDeck: (String, String) -> Unit = { _, _ -> },
     onBack: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
     var convexUrl by remember { mutableStateOf("https://ideal-peccary-626.convex.cloud") }
-    var taskId by remember { mutableStateOf("test-task-123") }
-    var verifier by remember { mutableStateOf<PlatformConvexVerifier?>(null) }
+    var taskId by remember { mutableStateOf(taskIdParam ?: "test-task-123") }
+    var verifier by remember { 
+        mutableStateOf<PlatformConvexVerifier?>(
+            if (taskIdParam != null) PlatformConvexVerifier("https://ideal-peccary-626.convex.cloud") else null
+        )
+    }
     var liveState by remember { mutableStateOf<TestAppState?>(null) }
-    var statusMessage by remember { mutableStateOf("Disconnected. Enter URL and connect.") }
+    var statusMessage by remember { 
+        mutableStateOf(
+            if (taskIdParam != null) "Connecting to generation job..." else "Disconnected. Enter URL and connect."
+        ) 
+    }
     var updateCounter by remember { mutableStateOf(0) }
+    var showImportDialog by remember { mutableStateOf(false) }
 
     // Subscribe to task updates when verifier is initialized
     LaunchedEffect(verifier, taskId) {
@@ -46,6 +59,13 @@ fun ConvexTestScreen(
             } catch (e: Exception) {
                 statusMessage = "Subscription Error: ${e.message}"
             }
+        }
+    }
+
+    // Trigger popup dialog automatically when task is complete
+    LaunchedEffect(liveState?.taskStatus, liveState?.generatedDeckId) {
+        if (liveState?.generatedDeckId != null || liveState?.taskStatus == "Complete") {
+            showImportDialog = true
         }
     }
 
@@ -151,12 +171,25 @@ fun ConvexTestScreen(
                     if (liveState != null) {
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .weight(1f, fill = false)
+                                .verticalScroll(rememberScrollState())
                         ) {
                             Text("Current Task Status: ${liveState?.taskStatus}", fontWeight = FontWeight.SemiBold)
-                            Text("Extracted Markdown:\n${liveState?.extractedMarkdown ?: "None"}", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            
+                            val rawMarkdown = liveState?.extractedMarkdown ?: "None"
+                            val displayMarkdown = if (rawMarkdown.length > 300) {
+                                rawMarkdown.take(300) + "\n\n[... content truncated for preview ...]"
+                            } else {
+                                rawMarkdown
+                            }
+                            
+                            Text("Extracted Markdown:\n$displayMarkdown", fontSize = 13.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("Devin Session ID: ${liveState?.devinSessionId ?: "None"}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Text("Devin Logs Counter: ${liveState?.devinLogs?.size ?: 0}", fontSize = 12.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            
+
                         }
                     } else {
                         Box(
@@ -213,5 +246,44 @@ fun ConvexTestScreen(
                 }
             }
         }
+    }
+
+    if (showImportDialog) {
+        val generatedId = liveState?.generatedDeckId ?: "temp-deck-id"
+        AlertDialog(
+            onDismissRequest = { showImportDialog = false },
+            title = {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.CheckCircle,
+                        contentDescription = null,
+                        tint = Color(0xFF4CAF50)
+                    )
+                    Text("AI Generation Complete", fontWeight = FontWeight.Bold)
+                }
+            },
+            text = {
+                Text("Your new vocabulary deck has been successfully created. Would you like to import it into your Langer decks?")
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showImportDialog = false
+                        onImportDeck("AI Generated Vocab", generatedId)
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF4CAF50))
+                ) {
+                    Text("Import Now", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showImportDialog = false }) {
+                    Text("Cancel")
+                }
+            }
+        )
     }
 }

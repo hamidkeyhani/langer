@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as generator from "../generator.js";
 import type * as tasks from "../tasks.js";
 
 import type {
@@ -17,6 +18,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  generator: typeof generator;
   tasks: typeof tasks;
 }>;
 
