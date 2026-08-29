@@ -128,261 +128,270 @@ fun DeckListScreen(
         },
         containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
-        Column(
+        LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
                 .padding(horizontal = 20.dp)
         ) {
-            // "Choose what to learn today?" Header
-            Text(
-                "Choose what\nto learn today?",
-                style = MaterialTheme.typography.headlineLarge.copy(lineHeight = 38.sp),
-                color = MaterialTheme.colorScheme.onBackground,
-                modifier = Modifier.padding(vertical = 12.dp)
-            )
-
-            // Horizontal Category Pills
-            LazyRow(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                items(categories) { category ->
-                    val isSelected = category == selectedCategory
-                    val pillBg = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
-                    val pillText = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                    
-                    Box(
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(50.dp))
-                            .background(pillBg)
-                            .clickable { 
-                                onCategorySelected(category) 
-                            }
-                            .padding(horizontal = 20.dp, vertical = 10.dp)
-                    ) {
-                        Text(
-                            category,
-                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
-                            color = pillText
-                        )
-                    }
-                }
-                
-                item {
-                    Box(
-                        modifier = Modifier
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
-                            .clickable { showAddCategoryDialog = true }
-                            .size(38.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Add,
-                            contentDescription = "Add Category",
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                    }
-                }
+            item {
+                // "Choose what to learn today?" Header
+                Text(
+                    "Choose what\nto learn today?",
+                    style = MaterialTheme.typography.headlineLarge.copy(lineHeight = 38.sp),
+                    color = MaterialTheme.colorScheme.onBackground,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Decks in the selected category
-            if (filteredDecks.isNotEmpty()) {
-                Text(
-                    text = "Select Deck:",
-                    style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
-                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
-                    modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
-                )
-
+            item {
+                // Horizontal Category Pills
                 LazyRow(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    items(filteredDecks) { deck ->
-                        val isSelected = deck.id == currentActiveDeck?.id
-                        val pillBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
-                        val pillBorderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
-                        val pillText = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
-                        val wordCount = cards.count { it.deckId == deck.id }
+                    items(categories) { category ->
+                        val isSelected = category == selectedCategory
+                        val pillBg = if (isSelected) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.surface
+                        val pillText = if (isSelected) MaterialTheme.colorScheme.background else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         
                         Box(
                             modifier = Modifier
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(50.dp))
                                 .background(pillBg)
-                                .border(1.dp, pillBorderColor, RoundedCornerShape(12.dp))
-                                .clickable { onActiveDeckIdSelected(deck.id) }
-                                .padding(horizontal = 14.dp, vertical = 8.dp)
+                                .clickable { 
+                                    onCategorySelected(category) 
+                                }
+                                .padding(horizontal = 20.dp, vertical = 10.dp)
                         ) {
                             Text(
-                                text = "${deck.name} ($wordCount)",
-                                style = MaterialTheme.typography.bodyMedium.copy(
-                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                                ),
+                                category,
+                                style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Bold),
                                 color = pillText
                             )
                         }
                     }
-                }
-                
-                Spacer(modifier = Modifier.height(8.dp))
-            }
-
-            // Main Featured Card (Active Deck)
-            if (currentActiveDeck != null) {
-                val activeCards = cards.filter { it.deckId == currentActiveDeck.id }
-                val activeNew = activeCards.count { it.repetitions == 0 }
-                val activeReview = activeCards.count { it.repetitions > 0 && it.nextReviewTimeMillis <= now }
-
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(190.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = BrainBobIndigo)
-                ) {
-                    Row(
-                        modifier = Modifier.fillMaxSize().padding(20.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        // Left details column
-                        Column(
-                            modifier = Modifier.weight(0.58f).fillMaxHeight(),
-                            verticalArrangement = Arrangement.SpaceBetween
-                        ) {
-                            Column {
-                                Text(
-                                    currentActiveDeck.name,
-                                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(modifier = Modifier.height(4.dp))
-                                Text(
-                                    "Learn $activeNew new • $activeReview review words",
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    maxLines = 2,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                            
-                            // Start Study Button (White Pill)
-                            Button(
-                                onClick = { onStudyDeck(currentActiveDeck.id) },
-                                colors = ButtonDefaults.buttonColors(containerColor = Color.White),
-                                shape = RoundedCornerShape(50.dp),
-                                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
-                            ) {
-                                Text(
-                                    "Start",
-                                    color = BrainBobIndigo,
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 14.sp
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
-                                Icon(
-                                    Icons.Default.PlayArrow,
-                                    contentDescription = null,
-                                    tint = BrainBobIndigo,
-                                    modifier = Modifier.size(16.dp)
-                                )
-                            }
-                        }
-
-                        // Right illustration column
+                    
+                    item {
                         Box(
-                            modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                            modifier = Modifier
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.1f))
+                                .clickable { showAddCategoryDialog = true }
+                                .size(38.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            AnimatedUnicornCharacter(
-                                modifier = Modifier.fillMaxSize().padding(4.dp)
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add Category",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
                 }
-            } else {
-                // Empty state active card
-                Card(
-                    modifier = Modifier.fillMaxWidth().height(180.dp),
-                    shape = RoundedCornerShape(24.dp),
-                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
-                ) {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(Icons.Default.Info, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text("No decks available", fontWeight = FontWeight.Bold)
-                            TextButton(onClick = { showCreateDialog = true }) {
-                                Text("Create Deck Now")
+            }
+
+            item {
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Decks in the selected category
+                if (filteredDecks.isNotEmpty()) {
+                    Column {
+                        Text(
+                            text = "Select Deck:",
+                            style = MaterialTheme.typography.bodyMedium.copy(fontWeight = FontWeight.Medium),
+                            color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 4.dp, bottom = 4.dp)
+                        )
+
+                        LazyRow(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            items(filteredDecks) { deck ->
+                                val isSelected = deck.id == currentActiveDeck?.id
+                                val pillBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surface
+                                val pillBorderColor = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline.copy(alpha = 0.5f)
+                                val pillText = if (isSelected) MaterialTheme.colorScheme.onPrimaryContainer else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                                val wordCount = cards.count { it.deckId == deck.id }
+                                
+                                Box(
+                                    modifier = Modifier
+                                        .clip(RoundedCornerShape(12.dp))
+                                        .background(pillBg)
+                                        .border(1.dp, pillBorderColor, RoundedCornerShape(12.dp))
+                                        .clickable { onActiveDeckIdSelected(deck.id) }
+                                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        text = "${deck.name} ($wordCount)",
+                                        style = MaterialTheme.typography.bodyMedium.copy(
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                        ),
+                                        color = pillText
+                                    )
+                                }
+                            }
+                        }
+                        
+                        Spacer(modifier = Modifier.height(8.dp))
+                    }
+                }
+            }
+
+            item {
+                // Main Featured Card (Active Deck)
+                if (currentActiveDeck != null) {
+                    val activeCards = cards.filter { it.deckId == currentActiveDeck.id }
+                    val activeNew = activeCards.count { it.repetitions == 0 }
+                    val activeReview = activeCards.count { it.repetitions > 0 && it.nextReviewTimeMillis <= now }
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(190.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = BrainBobIndigo)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxSize().padding(20.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            // Left details column
+                            Column(
+                                modifier = Modifier.weight(0.58f).fillMaxHeight(),
+                                verticalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column {
+                                    Text(
+                                        currentActiveDeck.name,
+                                        style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp),
+                                        color = Color.White,
+                                        fontWeight = FontWeight.Bold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(
+                                        "Learn $activeNew new • $activeReview review words",
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        color = Color.White.copy(alpha = 0.8f),
+                                        maxLines = 2,
+                                        overflow = TextOverflow.Ellipsis
+                                    )
+                                }
+                                
+                                // Start Study Button (White Pill)
+                                Button(
+                                    onClick = { onStudyDeck(currentActiveDeck.id) },
+                                    colors = ButtonDefaults.buttonColors(containerColor = Color.White),
+                                    shape = RoundedCornerShape(50.dp),
+                                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 8.dp)
+                                ) {
+                                    Text(
+                                        "Start",
+                                        color = BrainBobIndigo,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Icon(
+                                        Icons.Default.PlayArrow,
+                                        contentDescription = null,
+                                        tint = BrainBobIndigo,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+
+                            // Right illustration column
+                            Box(
+                                modifier = Modifier.weight(0.42f).fillMaxHeight(),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                AnimatedUnicornCharacter(
+                                    modifier = Modifier.fillMaxSize().padding(4.dp)
+                                )
+                            }
+                        }
+                    }
+                } else {
+                    // Empty state active card
+                    Card(
+                        modifier = Modifier.fillMaxWidth().height(180.dp),
+                        shape = RoundedCornerShape(24.dp),
+                        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+                    ) {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(Icons.Default.Info, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.primary)
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text("No decks available", fontWeight = FontWeight.Bold)
+                                TextButton(onClick = { showCreateDialog = true }) {
+                                    Text("Create Deck Now")
+                                }
                             }
                         }
                     }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            item {
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Recommended Features Section
-            Text(
-                "Recommended",
-                style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
-                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
-                modifier = Modifier.padding(bottom = 12.dp)
-            )
+                // Recommended Features Section
+                Text(
+                    "Recommended",
+                    style = MaterialTheme.typography.titleLarge.copy(fontSize = 18.sp),
+                    color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.9f),
+                    modifier = Modifier.padding(bottom = 12.dp)
+                )
+            }
 
             if (currentActiveDeck != null) {
-                LazyColumn(
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.weight(1f)
-                ) {
-                    item {
-                        RecommendedActionRow(
-                            title = "Manage Cards",
-                            subtitle = "Search, edit or delete vocabulary",
-                            iconColor = ActionColors.Blue,
-                            icon = Icons.Default.List,
-                            onClick = { onManageDeck(currentActiveDeck.id) }
-                        )
-                    }
-                    item {
-                        RecommendedActionRow(
-                            title = "Bulk Import",
-                            subtitle = "Import lists of words instantly",
-                            iconColor = ActionColors.Orange,
-                            icon = Icons.Default.Share, // Upload arrow equivalent
-                            onClick = { onBulkImport(currentActiveDeck.id) }
-                        )
-                    }
-                    item {
-                        RecommendedActionRow(
-                            title = "Add New Word",
-                            subtitle = "Add a custom vocabulary card",
-                            iconColor = ActionColors.Red,
-                            icon = Icons.Default.Add,
-                            onClick = { onAddCard(currentActiveDeck.id) }
-                        )
-                    }
-                    item {
-                        RecommendedActionRow(
-                            title = "Switch Deck",
-                            subtitle = "Study or manage other decks in this category (${filteredDecks.size} total)",
-                            iconColor = ActionColors.Green,
-                            icon = Icons.Default.Refresh,
-                            onClick = { showSwitchDeckDialog = true }
-                        )
-                    }
+                item {
+                    RecommendedActionRow(
+                        title = "Manage Cards",
+                        subtitle = "Search, edit or delete vocabulary",
+                        iconColor = ActionColors.Blue,
+                        icon = Icons.Default.List,
+                        onClick = { onManageDeck(currentActiveDeck.id) }
+                    )
                 }
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    RecommendedActionRow(
+                        title = "Bulk Import",
+                        subtitle = "Import lists of words instantly",
+                        iconColor = ActionColors.Orange,
+                        icon = Icons.Default.Share, // Upload arrow equivalent
+                        onClick = { onBulkImport(currentActiveDeck.id) }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    RecommendedActionRow(
+                        title = "Add New Word",
+                        subtitle = "Add a custom vocabulary card",
+                        iconColor = ActionColors.Red,
+                        icon = Icons.Default.Add,
+                        onClick = { onAddCard(currentActiveDeck.id) }
+                    )
+                }
+                item {
+                    Spacer(modifier = Modifier.height(10.dp))
+                    RecommendedActionRow(
+                        title = "Switch Deck",
+                        subtitle = "Study or manage other decks in this category (${filteredDecks.size} total)",
+                        iconColor = ActionColors.Green,
+                        icon = Icons.Default.Refresh,
+                        onClick = { showSwitchDeckDialog = true }
+                    )
+                    Spacer(modifier = Modifier.height(24.dp))
+                }
             }
         }
     }
