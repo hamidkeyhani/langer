@@ -44,7 +44,8 @@ fun DeckListScreen(
     onManageDeck: (String) -> Unit,
     onBulkImport: (String) -> Unit,
     onCreateDeck: (Deck) -> Unit,
-    onDeleteDeck: (String) -> Unit
+    onDeleteDeck: (String) -> Unit,
+    onConvexTest: () -> Unit
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var showSettingsDialog by remember { mutableStateOf(false) }
@@ -90,6 +91,12 @@ fun DeckListScreen(
                     }
                 },
                 actions = {
+                    IconButton(onClick = onConvexTest) {
+                        Icon(
+                            imageVector = Icons.Default.Cloud,
+                            contentDescription = "Test Convex"
+                        )
+                    }
                     IconButton(
                         onClick = { showSettingsDialog = true },
                         enabled = currentActiveDeck != null

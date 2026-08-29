@@ -55,6 +55,7 @@ kotlin {
             implementation("io.ktor:ktor-client-okhttp:3.0.1")
         }
         commonMain.dependencies {
+            implementation(project(":shared-integrations"))
             implementation(libs.compose.runtime)
             implementation(libs.compose.foundation)
             implementation(libs.compose.material3)

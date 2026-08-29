@@ -1,0 +1,9 @@
+{
+  "name": "langer-convex-backend",
+  "version": "1.0.0",
+  "description": "Convex backend for Langer",
+  "main": "index.js",
+  "dependencies": {
+    "convex": "^1.11.0"
+  }
+}

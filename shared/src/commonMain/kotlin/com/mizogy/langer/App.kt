@@ -225,7 +225,8 @@ fun App(onExit: () -> Unit = {}) {
                                 cardsState.removeAll { it.deckId == deckId }
                                 storage.saveDecks(decksState.toList())
                                 storage.saveCards(cardsState.toList())
-                            }
+                            },
+                            onConvexTest = { navigator.navigateTo(Screen.ConvexTest) }
                         )
                     }
                     is Screen.Study -> {
@@ -306,6 +307,11 @@ fun App(onExit: () -> Unit = {}) {
                                 storage.saveCards(cardsState.toList())
                                 navigator.pop()
                             },
+                            onBack = { navigator.pop() }
+                        )
+                    }
+                    is Screen.ConvexTest -> {
+                        ConvexTestScreen(
                             onBack = { navigator.pop() }
                         )
                     }
