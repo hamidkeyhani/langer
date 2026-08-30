@@ -31,19 +31,11 @@ fun ConvexTestScreen(
     onBack: () -> Unit
 ) {
     val coroutineScope = rememberCoroutineScope()
-    var convexUrl by remember { mutableStateOf("https://ideal-peccary-626.convex.cloud") }
-    var taskId by remember { mutableStateOf(taskIdParam ?: "test-task-123") }
-    var verifier by remember { 
-        mutableStateOf<PlatformConvexVerifier?>(
-            if (taskIdParam != null) PlatformConvexVerifier("https://ideal-peccary-626.convex.cloud") else null
-        )
-    }
+    val convexUrl = "https://ideal-peccary-626.convex.cloud"
+    val taskId = taskIdParam ?: "test-task-123"
+    val verifier = remember { PlatformConvexVerifier(convexUrl) }
     var liveState by remember { mutableStateOf<TestAppState?>(null) }
-    var statusMessage by remember { 
-        mutableStateOf(
-            if (taskIdParam != null) "Connecting to generation job..." else "Disconnected. Enter URL and connect."
-        ) 
-    }
+    var statusMessage by remember { mutableStateOf("Connecting to generation job...") }
     var updateCounter by remember { mutableStateOf(0) }
     var showImportDialog by remember { mutableStateOf(false) }
 
@@ -80,57 +72,14 @@ fun ConvexTestScreen(
                 }
             )
         }
-    ) { padding ->
+    ) { paddingValues ->
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(padding)
+                .padding(paddingValues)
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // Section 1: Configuration
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("1. Connection Settings", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-                    
-                    OutlinedTextField(
-                        value = convexUrl,
-                        onValueChange = { convexUrl = it },
-                        label = { Text("Convex HTTP/WS URL") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    OutlinedTextField(
-                        value = taskId,
-                        onValueChange = { taskId = it },
-                        label = { Text("Verification Task ID") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-
-                    Button(
-                        onClick = {
-                            if (convexUrl.isNotBlank() && convexUrl.startsWith("http")) {
-                                verifier = PlatformConvexVerifier(convexUrl)
-                            } else {
-                                statusMessage = "Invalid URL. Please enter a valid Convex deployment URL."
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text("Connect and Subscribe")
-                    }
-                }
-            }
-
             // Section 2: Real-time UI State (The core verification)
             Card(
                 shape = RoundedCornerShape(12.dp),
@@ -156,11 +105,22 @@ fun ConvexTestScreen(
                             .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(8.dp))
                             .padding(8.dp)
                     ) {
-                        Icon(
-                            imageVector = if (liveState != null) Icons.Default.CheckCircle else Icons.Default.Info,
-                            contentDescription = "Status",
-                            tint = if (liveState != null) Color(0xFF4CAF50) else Color.Gray
-                        )
+                        val status = liveState?.taskStatus ?: ""
+                        val isRunning = status.isNotBlank() && status != "Complete" && !status.startsWith("Error")
+
+                        if (isRunning) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(16.dp),
+                                strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Icon(
+                                imageVector = if (liveState != null) Icons.Default.CheckCircle else Icons.Default.Info,
+                                contentDescription = "Status",
+                                tint = if (liveState != null) Color(0xFF4CAF50) else Color.Gray
+                            )
+                        }
                         Text(
                             text = statusMessage,
                             fontSize = 13.sp,
@@ -169,6 +129,9 @@ fun ConvexTestScreen(
                     }
 
                     if (liveState != null) {
+                        val status = liveState?.taskStatus ?: ""
+                        val isRunning = status.isNotBlank() && status != "Complete" && !status.startsWith("Error")
+
                         Column(
                             verticalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier
@@ -176,6 +139,30 @@ fun ConvexTestScreen(
                                 .weight(1f, fill = false)
                                 .verticalScroll(rememberScrollState())
                         ) {
+                            if (isRunning) {
+                                Card(
+                                    colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.05f)),
+                                    shape = RoundedCornerShape(12.dp),
+                                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier.size(24.dp),
+                                            strokeWidth = 2.5.dp,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                        Column {
+                                            Text("AI Vocabulary Pipeline Active", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                                            Text(status, fontSize = 11.sp, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                }
+                            }
+
                             Text("Current Task Status: ${liveState?.taskStatus}", fontWeight = FontWeight.SemiBold)
                             
                             val rawMarkdown = liveState?.extractedMarkdown ?: "None"
@@ -198,50 +185,6 @@ fun ConvexTestScreen(
                         ) {
                             Text("No live data yet. Click 'Connect and Subscribe' or trigger a mutation below.", color = Color.Gray, fontSize = 13.sp)
                         }
-                    }
-                }
-            }
-
-            // Section 3: Trigger Dummy Payload (Mutation)
-            Card(
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Column(
-                    modifier = Modifier.padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Text("3. Write Dummy Mutation", fontWeight = FontWeight.Bold, fontSize = 16.sp)
-
-                    Button(
-                        onClick = {
-                            verifier?.let { client ->
-                                coroutineScope.launch {
-                                    updateCounter++
-                                    statusMessage = "Sending mutation payload..."
-                                    try {
-                                        client.updateTaskState(
-                                            taskId = taskId,
-                                            status = "Updated from Langer Compose App #$updateCounter",
-                                            markdown = "This is a dummy scraped verification payload at run #$updateCounter",
-                                            sessionId = "verifier-session-$updateCounter"
-                                        )
-                                        statusMessage = "Mutation succeeded! Waiting for reactive sync..."
-                                    } catch (e: Exception) {
-                                        statusMessage = "Mutation failed: ${e.message}"
-                                    }
-                                }
-                            } ?: run {
-                                statusMessage = "Error: Click 'Connect and Subscribe' first before running mutations."
-                            }
-                        },
-                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Default.PlayArrow, contentDescription = "Run")
-                        Spacer(Modifier.width(8.dp))
-                        Text("Trigger Mutation Payload")
                     }
                 }
             }
